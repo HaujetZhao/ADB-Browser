@@ -57,6 +57,7 @@ class Shell:
             if not line:  # 进程已退出
                 self._start()
                 return b"".join(out).decode("utf-8", "replace").replace("\r", ""), -1
+            out.append(line)
             if line.startswith(b"@EOC@"):  # ponytail: 文件名恰为 @EOC@+数字 时会截断，可忽略
                 text = b"".join(out).decode("utf-8", "replace").replace("\r", "")
                 return text, int(line[5:].strip() or -1)
