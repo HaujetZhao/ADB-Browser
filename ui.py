@@ -1,4 +1,5 @@
 """tkinter 界面：设备栏、目录树、文件列表（大小/时间/排序/过滤）、传输队列、右键操作、拖拽。"""
+import logging
 import os
 import queue
 import tempfile
@@ -192,6 +193,10 @@ class App:
         # 鼠标侧键 X1/X2（Windows 上 Tk 映射为 Button-8/9）：后退 / 前进
         self.root.bind("<Button-8>", lambda e: self.go_hist(-1))
         self.root.bind("<Button-9>", lambda e: self.go_hist(1))
+        # 排查侧键问题：记录所有非左键按下
+        self.root.bind("<ButtonPress>",
+                       lambda e: logging.info("ButtonPress num=%s 控件=%s", e.num, e.widget.winfo_class()),
+                       add="+")
 
     def _in_entry(self, widget):
         return widget.winfo_class() in ENTRY_CLASSES
@@ -382,6 +387,7 @@ class App:
 
     def go_hist(self, delta):
         pos = self.hist_pos + delta
+        logging.info("go_hist(%+d): pos %d/%d", delta, pos, len(self.history) - 1)
         if 0 <= pos < len(self.history):
             self.hist_pos = pos
             self.navigate(self.history[pos])  # 联动的 on_tree_select 会因路径相同跳过入栈
