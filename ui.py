@@ -183,7 +183,11 @@ class App:
 
     def on_drop_files(self, event):
         for f in self.root.tk.splitlist(event.data):  # Tcl 列表字符串 → 路径元组
-            self.start_transfer("push", f, self.path_var.get())
+            self.push_one(f)
+
+    def push_one(self, local):
+        """推送单个文件：目标必须是显式文件路径，这台设备的 FUSE 上推目录会失败。"""
+        self.start_transfer("push", local, self.remote(os.path.basename(local)))
 
     def on_drag_init(self, event):
         # ponytail: 拖出 = 先同步拉到临时目录再交给资源管理器，大文件会卡界面；
@@ -230,7 +234,7 @@ class App:
             if not is_dir:
                 continue
             child = iid.rstrip("/") + "/" + name
-            self.tree.insert(iid, "end", iid=child, text=f"{name} ({meta})")
+            self.tree.insert(iid, "end", iid=child, text=f"{name} ({meta.removesuffix(' 项')})")
             self.tree.insert(child, "end", iid="dummy:" + child)
 
     def ensure_loaded(self, iid):
@@ -347,9 +351,8 @@ class App:
         files = filedialog.askopenfilenames(title="推送哪些文件")
         if not files:
             return
-        dst = self.path_var.get()
         for f in files:
-            self.start_transfer("push", f, dst)
+            self.push_one(f)
 
     def delete_selected(self):
         names = self.sel_names()
