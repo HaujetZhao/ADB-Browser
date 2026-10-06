@@ -6,7 +6,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from core import adb, fs
-from core.ui import MARK_COLOR, ROOT, SEL_BG, SEL_FG
+from core.ui import ROOT
 
 
 class FileListMixin:
@@ -36,10 +36,11 @@ class FileListMixin:
         right.add(ff, weight=1)  # 多余空间全给文件列表（队列为 weight=0 恒高）
 
         # 行上的前景色标签互斥（见 on_sel_change / render_list），这里的配置顺序不再敏感
-        self.list.tag_configure("dir", foreground="#0066cc")
-        self.list.tag_configure("mark", foreground=MARK_COLOR)
-        self.list.tag_configure("seltxt", foreground=SEL_FG, background=SEL_BG)
-        self.list.tag_configure("selbg", background=SEL_BG)
+        c = self.style.colors
+        self.list.tag_configure("dir", foreground=c.info)
+        self.list.tag_configure("mark", foreground=c.danger)
+        self.list.tag_configure("seltxt", foreground=c.selectfg, background=c.selectbg)
+        self.list.tag_configure("selbg", background=c.selectbg)
         self.list.bind("<Double-1>", self.on_list_double)
         self.list.bind("<Button-3>", self.on_list_menu)
         self.list.bind("<Button-1>", self.on_list_click, add="+")

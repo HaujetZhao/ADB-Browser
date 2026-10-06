@@ -3,7 +3,6 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from core import adb, fs
-from core.ui import MARK_COLOR, SEL_BG, SEL_FG
 
 
 class TreeMixin:
@@ -21,9 +20,10 @@ class TreeMixin:
         self.tree.bind("<Button-1>", self.on_tree_click, add="+")
         self.tree.bind("<Double-1>", self.on_tree_double, add="+")
         self.tree.bind("<<TreeviewSelect>>", self.on_tree_select)
-        self.tree.tag_configure("seltxt", foreground=SEL_FG, background=SEL_BG)
-        self.tree.tag_configure("selbg", background=SEL_BG)
-        self.tree.tag_configure("mark", foreground=MARK_COLOR)
+        c = self.style.colors
+        self.tree.tag_configure("seltxt", foreground=c.selectfg, background=c.selectbg)
+        self.tree.tag_configure("selbg", background=c.selectbg)
+        self.tree.tag_configure("mark", foreground=c.danger)
 
         # 右键菜单（节点都是目录）
         self.tree.bind("<Button-3>", self.on_tree_menu)

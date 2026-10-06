@@ -4,8 +4,10 @@ import queue
 import tkinter as tk
 from tkinter import ttk
 
+from ttkbootstrap import Style
+
 from core import adb, config, fs
-from core.ui import ROOT
+from core.ui import ROOT, THEME
 from core.ui.favorites import FavoritesMixin
 from core.ui.filelist import FileListMixin
 from core.ui.keys import KeyMixin
@@ -33,6 +35,7 @@ class App(TreeMixin, FileListMixin, TransferMixin, KeyMixin, FavoritesMixin):
         self.history = []         # 浏览过的路径，鼠标侧键/X1 X2 后退前进
         self.hist_pos = -1
 
+        self.style = Style(theme=THEME)
         self._build_top()
         self._build_panes()
         self._setup_sel_tags()
