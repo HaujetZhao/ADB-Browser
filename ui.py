@@ -190,13 +190,9 @@ class App:
         self.list.bind("<Delete>", lambda e: self.delete_selected())
         self.list.bind("<Control-a>", self.on_select_all)
         self.list.bind("<Return>", self.on_list_double)
-        # 鼠标侧键 X1/X2（Windows 上 Tk 映射为 Button-8/9）：后退 / 前进
-        self.root.bind("<Button-8>", lambda e: self.go_hist(-1))
-        self.root.bind("<Button-9>", lambda e: self.go_hist(1))
-        # 排查侧键问题：记录所有非左键按下
-        self.root.bind("<ButtonPress>",
-                       lambda e: logging.info("ButtonPress num=%s 控件=%s", e.num, e.widget.winfo_class()),
-                       add="+")
+        # 鼠标侧键 X1/X2：Tk 9.0.4 下 <Button-8/9> 精确模式收不到（实测），
+        # 但 <ButtonPress> 能收到 num=8/9，故统一在 catch-all 里按 num 分发
+        self.root.bind("<ButtonPress>", self.on_button_press, add="+")
 
     def _in_entry(self, widget):
         return widget.winfo_class() in ENTRY_CLASSES
@@ -211,6 +207,15 @@ class App:
             self.filter_entry.focus_set()
             self.filter_entry.icursor("end")
             return "break"
+
+    def on_button_press(self, event):
+        """统一处理鼠标按下：记录非左键；侧键 X1/X2（num=8/9）后退/前进。"""
+        if event.num != 1:
+            logging.info("ButtonPress num=%s 控件=%s", event.num, event.widget.winfo_class())
+        if event.num == 8:
+            self.go_hist(-1)
+        elif event.num == 9:
+            self.go_hist(1)
 
     def on_backspace(self, event):
         if not self._in_entry(event.widget):
