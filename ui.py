@@ -42,6 +42,7 @@ class App:
 
         self._build_top()
         self._build_panes()
+        self._setup_sel_tags()
         self._build_status()
         self._bind_keys()
         self._setup_dnd()
@@ -189,6 +190,36 @@ class App:
         cm.add_separator()
         cm.add_command(label="✕ 清除标记", command=lambda: setter(None))
         return cm
+
+    def _setup_sel_tags(self):
+        """选中态只给未设色行换标准配色；设色行保前景、只加选中底色。
+
+        样式 map 是全局的，会把标记色一起盖掉，故禁用 map，
+        改在 <<TreeviewSelect>> 里对选中变化的行差量重挂标签。
+        """
+        style = ttk.Style()
+        sel_bg = style.lookup("Treeview", "background", ["selected"]) or "#0078d7"
+        sel_fg = style.lookup("Treeview", "foreground", ["selected"]) or "#ffffff"
+        style.map("Treeview", foreground=[], background=[])
+        self.prev_sel = {}  # 控件 → 上次选中集
+        for w in (self.list, self.tree):
+            w.tag_configure("seltxt", foreground=sel_fg, background=sel_bg)
+            w.tag_configure("selbg", background=sel_bg)
+            w.bind("<<TreeviewSelect>>", self.on_sel_change, add="+")
+
+    def on_sel_change(self, event):
+        w = event.widget
+        key = str(w)
+        cur = set(w.selection())
+        for iid in self.prev_sel.get(key, set()) ^ cur:
+            if not w.exists(iid):
+                continue
+            base = [t for t in w.item(iid, "tags") or () if t not in ("seltxt", "selbg")]
+            if iid in cur:
+                colored = any(t.startswith("c_") for t in base)
+                base += ["selbg"] if colored else ["seltxt"]
+            w.item(iid, tags=base)
+        self.prev_sel[key] = cur
 
     def _build_status(self):
         self.status_var = tk.StringVar()
