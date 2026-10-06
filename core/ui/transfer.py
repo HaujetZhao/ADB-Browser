@@ -23,7 +23,7 @@ class TransferMixin:
         self.queue.configure(yscrollcommand=sb3.set)
         self.queue.pack(side="left", fill="both", expand=True)
         sb3.pack(side="right", fill="y")
-        right.add(qf, weight=1)
+        right.add(qf, weight=0)  # 恒定高度：窗口变高时空间全给上方文件列表
 
     # ---------- 队列 ----------
 

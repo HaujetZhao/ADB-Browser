@@ -31,7 +31,7 @@ class FileListMixin:
         self.list.configure(yscrollcommand=sb2.set)
         self.list.pack(side="left", fill="both", expand=True)
         sb2.pack(side="right", fill="y")
-        right.add(ff, weight=3)
+        right.add(ff, weight=1)  # 多余空间全给文件列表（队列为 weight=0 恒高）
 
         # 行上的前景色标签互斥（见 on_sel_change / render_list），这里的配置顺序不再敏感
         self.list.tag_configure("dir", foreground="#0066cc")
