@@ -116,12 +116,19 @@ class App(TreeMixin, FileListMixin, TransferMixin, KeyMixin, FavoritesMixin):
         for iid in self.prev_sel.get(key, set()) ^ cur:
             if not w.exists(iid):
                 continue
-            base = [t for t in w.item(iid, "tags") or () if t not in ("seltxt", "selbg", "dir")]
-            # 每行只留一个定义前景色的标签，杜绝 ttk 标签冲突：
-            # 未标注选中 → seltxt（标准反白，dir 被换下）；已标注 → mark 保前景，选中叠 selbg 补底
+            name = w.item(iid, "values")[0] if w is self.list else ""
+            marked = "mark" in (w.item(iid, "tags") or ())
+            is_list_dir = (w is self.list
+                           and any(e[0] == name and e[1] for e in self.entries))
             if iid in cur:
-                marked = "mark" in base
-                base = (["mark", "selbg"] if marked else ["seltxt"])
+                # 选中：前景标签让位（dir 摘除避免冲突）——未标注走标准反白，标注保前景补底
+                base = ["mark", "selbg"] if marked else ["seltxt"]
+            else:
+                # 取消：恢复原样——标注红 / 目录蓝 / 普通黑（树节点本就无 dir 标签）
+                if marked:
+                    base = ["mark"]
+                else:
+                    base = ["dir"] if is_list_dir else []
             w.item(iid, tags=base)
         self.prev_sel[key] = cur
 
