@@ -342,14 +342,28 @@ class App:
     # ---------- 目录树 ----------
 
     def load_children(self, iid):
-        """加载某目录的子目录节点（先清掉旧子节点），每个子目录先挂占位。"""
+        """加载某目录的子目录节点（先清旧子节点）。
+
+        find 一次取两层目录：子目录数作节点文本，空目录不挂占位——没占位就没有展开箭头。
+        隐藏目录（. 开头）沿用 ls 不带 -a 的行为，不显示。
+        """
         self.tree.delete(*self.tree.get_children(iid))
-        for name, is_dir, _, _, nlink in fs.parse_ls(self.shell.run(f"ls -pl {adb.sh_quote(iid)}")[0]):
-            if not is_dir:
+        base = iid.rstrip("/")
+        out, _ = self.shell.run(f"find {adb.sh_quote(base)} -mindepth 1 -maxdepth 2 -type d 2>/dev/null")
+        subs = {}
+        for line in out.splitlines():
+            parts = line[len(base):].lstrip("/").split("/")
+            if not parts[0] or any(p.startswith(".") for p in parts):
                 continue
-            child = iid.rstrip("/") + "/" + name
-            self.tree.insert(iid, "end", iid=child, text=f"{name} ({nlink - 2})")
-            self.tree.insert(child, "end", iid="dummy:" + child)
+            if len(parts) == 1:
+                subs.setdefault(parts[0], [])
+            else:
+                subs.setdefault(parts[0], []).append(parts[1])
+        for name in sorted(subs, key=str.lower):
+            child = base + "/" + name
+            self.tree.insert(iid, "end", iid=child, text=f"{name} ({len(subs[name])})")
+            if subs[name]:  # 空目录不挂占位，不出箭头
+                self.tree.insert(child, "end", iid="dummy:" + child)
 
     def ensure_loaded(self, iid):
         """若节点还挂着占位子节点，替换为真实子目录。"""
