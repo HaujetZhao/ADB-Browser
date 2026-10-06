@@ -11,6 +11,8 @@ import fs
 
 ROOT = "/storage/emulated/0"  # 浏览根目录：手机内部存储
 
+TEMP_BASE = os.path.join(tempfile.gettempdir(), "adb-browser")  # 拖出暂存目录
+
 # 焦点在这些控件里时不劫持按键（路径栏 / 过滤框 / 设备框）
 ENTRY_CLASSES = ("TEntry", "TCombobox", "Text", "Spinbox")
 
@@ -183,8 +185,10 @@ class App:
         self.list.dnd_bind("<<DragInitCmd>>", self.on_drag_init)
 
     def on_drop_files(self, event):
-        for f in self.root.tk.splitlist(event.data):  # Tcl 列表字符串 → 路径元组
-            self.push_one(f)
+        # Tcl 列表字符串 → 路径元组；自己拖出的临时副本不能又 push 回去
+        for f in self.root.tk.splitlist(event.data):
+            if not f.lower().startswith(TEMP_BASE.lower()):
+                self.push_one(f)
 
     def push_one(self, local):
         # 必须显式拼好远端文件路径：Windows adb.exe 在"目标为目录自动拼文件名"时
@@ -200,7 +204,7 @@ class App:
             return "refuse_drop"  # tkdnd 约定：返回它则不启动拖拽
         # ponytail: 拖出 = 先同步拉到临时目录再交给资源管理器，大文件会卡界面；
         # 要不卡的得换虚拟文件方案（CFSTR_FILEDESCRIPTOR），不值得
-        base = os.path.join(tempfile.gettempdir(), "adb-browser",
+        base = os.path.join(TEMP_BASE,
                             (self.serial or "dev").replace(":", "_"))  # 冒号在 Windows 路径非法
         os.makedirs(base, exist_ok=True)
         paths = []
