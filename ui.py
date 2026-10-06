@@ -188,7 +188,8 @@ class App:
     def on_drag_init(self, event):
         # ponytail: 拖出 = 先同步拉到临时目录再交给资源管理器，大文件会卡界面；
         # 要不卡的得换虚拟文件方案（CFSTR_FILEDESCRIPTOR），不值得
-        base = os.path.join(tempfile.gettempdir(), "adb-browser", self.serial or "dev")
+        base = os.path.join(tempfile.gettempdir(), "adb-browser",
+                            (self.serial or "dev").replace(":", "_"))  # 冒号在 Windows 路径非法
         os.makedirs(base, exist_ok=True)
         paths = []
         for name in self.sel_names():
@@ -225,11 +226,11 @@ class App:
     def load_children(self, iid):
         """加载某目录的子目录节点（先清掉旧子节点），每个子目录先挂占位。"""
         self.tree.delete(*self.tree.get_children(iid))
-        for name, is_dir, _ in fs.parse_ls(self.shell.run(f"ls -pl {adb.sh_quote(iid)}")[0]):
+        for name, is_dir, meta in fs.parse_ls(self.shell.run(f"ls -pl {adb.sh_quote(iid)}")[0]):
             if not is_dir:
                 continue
             child = iid.rstrip("/") + "/" + name
-            self.tree.insert(iid, "end", iid=child, text=name)
+            self.tree.insert(iid, "end", iid=child, text=f"{name} ({meta})")
             self.tree.insert(child, "end", iid="dummy:" + child)
 
     def ensure_loaded(self, iid):
@@ -308,8 +309,8 @@ class App:
         if not sel:
             return
         name = self.list.item(sel[0], "values")[0]
-        if name.endswith("/"):  # 双击目录进入
-            self.navigate(self.path_var.get().rstrip("/") + "/" + name.rstrip("/"))
+        if "dir" in self.list.item(sel[0], "tags"):  # 双击目录进入
+            self.navigate(self.path_var.get().rstrip("/") + "/" + name)
 
     def on_list_menu(self, event):
         iid = self.list.identify_row(event.y)
@@ -397,8 +398,8 @@ class App:
 
             code = adb.transfer(kind, self.serial, src, dst, on_line)
             if code == 0:
-                # adb 收尾行自带摘要：1 file pulled, 0 skipped. 12.4 MB/s (12345678 bytes in 0.945s)
-                final = "完成：" + fs.humanize_bytes_text(last[0]) if last[0] else "完成"
+                s = fs.transfer_summary(last[0])  # "11.8 MB，12.4 MB/s，0.945s"
+                final = f"完成：{s}" if s else "完成"
             else:
                 final = f"失败：{last[0][:60]}"
             self.q.put((iid, ("final", final)))
