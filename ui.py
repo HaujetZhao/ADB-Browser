@@ -217,7 +217,10 @@ class App:
             base = [t for t in w.item(iid, "tags") or () if t not in ("seltxt", "selbg")]
             if iid in cur:
                 colored = any(t.startswith("c_") for t in base)
-                base += ["selbg"] if colored else ["seltxt"]
+                if colored:  # 标记色保前景，只补选中底色
+                    base += ["selbg"]
+                else:  # 未设色走标准选中态；Tk 标签同选项靠前优先，seltxt 须排在 dir 前
+                    base = ["seltxt"] + base
             w.item(iid, tags=base)
         self.prev_sel[key] = cur
 
