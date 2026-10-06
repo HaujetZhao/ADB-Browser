@@ -198,8 +198,7 @@ class App:
         改在 <<TreeviewSelect>> 里对选中变化的行差量重挂标签。
         """
         style = ttk.Style()
-        sel_bg = style.lookup("Treeview", "background", ["selected"]) or "#0078d7"
-        sel_fg = style.lookup("Treeview", "foreground", ["selected"]) or "#ffffff"
+        sel_bg, sel_fg = "SystemHighlight", "SystemHighlightText"  # 系统选中配色；style.lookup 在 Tk 9 查不准
         style.map("Treeview", foreground=[], background=[])
         self.prev_sel = {}  # 控件 → 上次选中集
         for w in (self.list, self.tree):
