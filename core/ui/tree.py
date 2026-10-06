@@ -29,7 +29,6 @@ class TreeMixin:
         self.tree.bind("<Button-3>", self.on_tree_menu)
         tm = tk.Menu(self.root, tearoff=0)
         tm.add_command(label="拉取到电脑…", command=self.pull_node)
-        tm.add_command(label="★ 收藏此路径", command=lambda: self.add_favorite(self.tree.selection()[0]))
         tm.add_command(label="新建文件夹…", command=self.make_dir_in_node)
         tm.add_command(label="重命名…", command=self.rename_node)
         tm.add_command(label="删除", command=self.delete_node)

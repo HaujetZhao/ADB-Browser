@@ -24,8 +24,8 @@ class FavoritesMixin:
                       state="normal" if cur in self.favorites else "disabled")
         m.post(self.star.winfo_rootx(), self.star.winfo_rooty() + self.star.winfo_height())
 
-    def add_favorite(self, path=None):
-        p = path or self.path_var.get()
+    def add_favorite(self):
+        p = self.path_var.get()
         if p not in self.favorites:
             self.favorites.append(p)
             self.save_favorites()
