@@ -181,8 +181,9 @@ class App:
             return  # 未装 tkinterdnd2：拖拽不可用，右键推送/拉取照常
         self.list.drop_target_register("DND_Files")
         self.list.dnd_bind("<<Drop>>", self.on_drop_files)
-        self.list.drag_source_register("DND_Files")
-        self.list.dnd_bind("<<DragInitCmd>>", self.on_drag_init)
+        # 临时禁用拖出：恢复时取消下面两行注释
+        # self.list.drag_source_register("DND_Files")
+        # self.list.dnd_bind("<<DragInitCmd>>", self.on_drag_init)
 
     def on_drop_files(self, event):
         # Tcl 列表字符串 → 路径元组；自己拖出的临时副本不能又 push 回去

@@ -7,11 +7,46 @@ name = "adb-browser"
 version = "0.3.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "pyftpdlib" },
     { name = "tkinterdnd2" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "tkinterdnd2", specifier = ">=0.6.3" }]
+requires-dist = [
+    { name = "pyftpdlib", specifier = ">=2.2.0" },
+    { name = "tkinterdnd2", specifier = ">=0.6.3" },
+]
+
+[[package]]
+name = "pyasynchat"
+version = "1.0.5"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
+dependencies = [
+    { name = "pyasyncore" },
+]
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/ec/d2/b41df9021c12ca314146abcde7bdd3d9d37d44cc01559d7f13df459ee586/pyasynchat-1.0.5.tar.gz", hash = "sha256:36665473ae730dac51e6d7dad70f8295962120c830ab692f0a31efba32687e24" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/48/e8/e5ad498cb6a834c16af910e259926fd545dd7873a2da451f3a2bb228d7ee/pyasynchat-1.0.5-py3-none-any.whl", hash = "sha256:35b7859515693e479e8d95ebe9f32cbf4d6312ab7599ced39fc24699e51de46f" },
+]
+
+[[package]]
+name = "pyasyncore"
+version = "1.0.5"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/4e/43/035dfe0cb01687c1940fdc008f46a43c41067e226e862df49327469764a0/pyasyncore-1.0.5.tar.gz", hash = "sha256:dd483d5103a6d59b66b86e0ca2334ad43dca732ff23a0ac5d63c88c52510542e" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/1f/ab/b10cee56269ae150763f3f83b3e9305a11f42f50b3dcd58eeb8f7988f0bb/pyasyncore-1.0.5-py3-none-any.whl", hash = "sha256:269bbc5252671827387636822841a1fb721ec6e858b23a3e12cf92eb1f97da2a" },
+]
+
+[[package]]
+name = "pyftpdlib"
+version = "2.2.0"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple" }
+dependencies = [
+    { name = "pyasynchat" },
+    { name = "pyasyncore" },
+]
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/f9/42/8751c5f58ae59b09e070da4fa322ae9693a340d2cc456b5a380b2c1ee47a/pyftpdlib-2.2.0.tar.gz", hash = "sha256:4ba0642078792df63dd3b2e9c8f838f2a3ecf428c7518d5921c0530d53512acf" }
 
 [[package]]
 name = "tkinterdnd2"
