@@ -33,6 +33,8 @@ class App:
         self.sort_col = "name"    # 列表排序：表头可点，再点一次反向
         self.sort_desc = False
         self.favorites = self.cfg["favorites"]
+        self.history = []         # 浏览过的路径，鼠标侧键/X1 X2 后退前进
+        self.hist_pos = -1
 
         self._build_top()
         self._build_panes()
@@ -122,9 +124,9 @@ class App:
         for col, text in (("name", "文件"), ("size", "大小"), ("mtime", "修改时间")):
             self.list.heading(col, text=text,
                               command=lambda c=col: self.set_sort(c))
-        self.list.column("name", anchor="w")
-        self.list.column("size", width=110, anchor="e")
-        self.list.column("mtime", width=140, anchor="center")
+        self.list.column("name", anchor="w")  # 只有文件列吃掉多余空间
+        self.list.column("size", width=110, anchor="e", stretch=False)
+        self.list.column("mtime", width=140, anchor="center", stretch=False)
         sb2 = ttk.Scrollbar(lw, command=self.list.yview)
         self.list.configure(yscrollcommand=sb2.set)
         self.list.pack(side="left", fill="both", expand=True)
@@ -159,6 +161,16 @@ class App:
         m.add_command(label="新建文件夹…", command=self.make_dir)
         self.menu = m
 
+        # 树的右键菜单（节点都是目录）
+        self.tree.bind("<Button-3>", self.on_tree_menu)
+        tm = tk.Menu(self.root, tearoff=0)
+        tm.add_command(label="拉取到电脑…", command=self.pull_node)
+        tm.add_command(label="★ 收藏此路径", command=lambda: self.add_favorite(self.tree.selection()[0]))
+        tm.add_command(label="新建文件夹…", command=self.make_dir_in_node)
+        tm.add_command(label="重命名…", command=self.rename_node)
+        tm.add_command(label="删除", command=self.delete_node)
+        self.tmenu = tm
+
     def _build_status(self):
         self.status_var = tk.StringVar()
         ttk.Label(self.root, textvariable=self.status_var, anchor="w", relief="sunken").pack(fill="x")
@@ -177,6 +189,9 @@ class App:
         self.list.bind("<Delete>", lambda e: self.delete_selected())
         self.list.bind("<Control-a>", self.on_select_all)
         self.list.bind("<Return>", self.on_list_double)
+        # 鼠标侧键 X1/X2（Windows 上 Tk 映射为 Button-8/9）：后退 / 前进
+        self.root.bind("<Button-8>", lambda e: self.go_hist(-1))
+        self.root.bind("<Button-9>", lambda e: self.go_hist(1))
 
     def _in_entry(self, widget):
         return widget.winfo_class() in ENTRY_CLASSES
@@ -280,9 +295,11 @@ class App:
                       state="normal" if cur in self.favorites else "disabled")
         m.post(self.star.winfo_rootx(), self.star.winfo_rooty() + self.star.winfo_height())
 
-    def add_favorite(self):
-        self.favorites.append(self.path_var.get())
-        self.save_favorites()
+    def add_favorite(self, path=None):
+        p = path or self.path_var.get()
+        if p not in self.favorites:
+            self.favorites.append(p)
+            self.save_favorites()
 
     def remove_favorite(self):
         p = self.path_var.get()
@@ -343,6 +360,7 @@ class App:
         if not sel or sel[0].startswith("dummy:"):
             return
         node = sel[0]
+        self._push_hist(node)
         self.path_var.set(node)
         self.entries = fs.parse_ls(self.shell.run(f"ls -pl {adb.sh_quote(node)}")[0])
         self.filter_var.set("")
@@ -353,6 +371,20 @@ class App:
     def go_up(self):
         p = fs.parent_path(self.path_var.get())
         self.navigate(p if p.startswith(ROOT) else ROOT)
+
+    def _push_hist(self, path):
+        cur = self.history[self.hist_pos] if self.history else None
+        if path == cur:
+            return
+        del self.history[self.hist_pos + 1:]
+        self.history.append(path)
+        self.hist_pos = len(self.history) - 1
+
+    def go_hist(self, delta):
+        pos = self.hist_pos + delta
+        if 0 <= pos < len(self.history):
+            self.hist_pos = pos
+            self.navigate(self.history[pos])  # 联动的 on_tree_select 会因路径相同跳过入栈
 
     def navigate(self, path):
         """跳转到 path（必须在 ROOT 下）：逐级确保树节点已加载，最后选中它。"""
@@ -509,6 +541,55 @@ class App:
             return
         self.shell_run(f"mkdir -p {adb.sh_quote(self.remote(name))}", f"已创建 {name}")
         self.reload_current()
+
+    # ---------- 树节点操作 ----------
+
+    def sel_node(self):
+        sel = self.tree.selection()
+        return sel[0] if sel and not sel[0].startswith("dummy:") else None
+
+    def on_tree_menu(self, event):
+        iid = self.tree.identify_row(event.y)
+        if iid and not iid.startswith("dummy:"):
+            self.tree.selection_set(iid)  # 先选中，联动右侧列表
+            self.tmenu.tk_popup(event.x_root, event.y_root)
+
+    def refresh_node(self, parent):
+        """节点增删改名后：重载父级树一层并导航过去（联动刷新列表）。"""
+        self.load_children(parent)
+        self.navigate(parent)
+
+    def pull_node(self):
+        dst = filedialog.askdirectory(title="拉取到哪个目录")
+        if dst:
+            self.start_transfer("pull", self.sel_node(), dst)
+
+    def make_dir_in_node(self):
+        parent = self.sel_node()
+        name = simpledialog.askstring("新建文件夹", "文件夹名：", parent=self.root)
+        if not name:
+            return
+        self.shell_run(f"mkdir -p {adb.sh_quote(parent + '/' + name)}", f"已创建 {name}")
+        self.refresh_node(parent)
+
+    def rename_node(self):
+        path = self.sel_node()
+        old = path.rsplit("/", 1)[-1]
+        new = simpledialog.askstring("重命名", "新名字：", initialvalue=old, parent=self.root)
+        if not new or new == old:
+            return
+        parent = fs.parent_path(path)
+        self.shell_run(f"mv {adb.sh_quote(path)} {adb.sh_quote(parent + '/' + new)}",
+                       f"已重命名为 {new}")
+        self.refresh_node(parent)
+
+    def delete_node(self):
+        path = self.sel_node()
+        if not messagebox.askyesno("删除", f"删除 {path}？目录将递归删除。"):
+            return
+        parent = fs.parent_path(path)
+        if self.shell_run(f"rm -rf {adb.sh_quote(path)}", f"已删除 {path}"):
+            self.refresh_node(parent)
 
     # ---------- 传输队列 ----------
 
