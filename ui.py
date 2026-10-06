@@ -15,6 +15,9 @@ ROOT = "/storage/emulated/0"  # 浏览根目录：手机内部存储
 
 TEMP_BASE = os.path.join(tempfile.gettempdir(), "adb-browser")  # 拖出暂存目录
 
+PALETTE = {"红": "#e53935", "橙": "#fb8c00", "黄": "#d4b106", "绿": "#43a047",
+           "青": "#00acc1", "蓝": "#1e88e5", "紫": "#8e24aa", "灰": "#757575"}  # 标记用色
+
 # 焦点在这些控件里时不劫持按键（路径栏 / 过滤框 / 设备框）
 ENTRY_CLASSES = ("TEntry", "TCombobox", "Text", "Spinbox")
 
@@ -149,6 +152,9 @@ class App:
         right.add(qf, weight=1)
 
         self.list.tag_configure("dir", foreground="#0066cc")
+        for cname, hexv in PALETTE.items():
+            self.list.tag_configure(f"c_{cname}", foreground=hexv)
+            self.tree.tag_configure(f"c_{cname}", foreground=hexv)
         self.list.bind("<Double-1>", self.on_list_double)
         self.list.bind("<Button-3>", self.on_list_menu)
         self.list.bind("<Button-1>", self.on_list_click, add="+")
@@ -160,6 +166,7 @@ class App:
         m.add_separator()
         m.add_command(label="推送文件到当前目录…", command=self.push_files)
         m.add_command(label="新建文件夹…", command=self.make_dir)
+        m.add_cascade(label="标记颜色", menu=self._color_menu(m, self.set_color))
         self.menu = m
 
         # 树的右键菜单（节点都是目录）
@@ -170,7 +177,18 @@ class App:
         tm.add_command(label="新建文件夹…", command=self.make_dir_in_node)
         tm.add_command(label="重命名…", command=self.rename_node)
         tm.add_command(label="删除", command=self.delete_node)
+        tm.add_cascade(label="标记颜色", menu=self._color_menu(tm, self.set_node_color))
         self.tmenu = tm
+
+    def _color_menu(self, parent, setter):
+        cm = tk.Menu(parent, tearoff=0)
+        for cname in PALETTE:
+            cm.add_command(label=f"● {cname}",
+                           command=lambda n=cname: setter(n),
+                           foreground=PALETTE[cname])
+        cm.add_separator()
+        cm.add_command(label="✕ 清除标记", command=lambda: setter(None))
+        return cm
 
     def _build_status(self):
         self.status_var = tk.StringVar()
@@ -317,6 +335,40 @@ class App:
         self.save_favorites()
         self.status(f"已移除收藏：{p}")
 
+    # ---------- 颜色标记 ----------
+
+    def _move_color(self, old, new):
+        """路径改名后同步挪动颜色记录。"""
+        colors = self.cfg["colors"]
+        if old in colors:
+            if new:
+                colors[new] = colors.pop(old)
+            else:
+                del colors[old]
+
+    def set_color(self, color):
+        """给列表选中项（可为多个）设置/清除颜色标记。"""
+        colors = self.cfg["colors"]
+        for name in self.sel_names():
+            p = self.remote(name)
+            if color:
+                colors[p] = color
+            else:
+                colors.pop(p, None)
+        config.save(self.cfg)
+        self.render_list()
+
+    def set_node_color(self, color):
+        """给树选中节点设置/清除颜色标记。"""
+        p = self.sel_node()
+        if color:
+            self.cfg["colors"][p] = color
+        else:
+            self.cfg["colors"].pop(p, None)
+        config.save(self.cfg)
+        self.tree.item(p, tags=(["c_" + color] if color else []))
+        self.status(("已标记 " if color else "已清除标记 ") + p)
+
     # ---------- 设备 ----------
 
     def refresh_devices(self):
@@ -352,7 +404,9 @@ class App:
                 continue
             n = nlink - 2
             child = iid.rstrip("/") + "/" + name
-            self.tree.insert(iid, "end", iid=child, text=f"{name} ({n})")
+            c = self.cfg["colors"].get(child)
+            self.tree.insert(iid, "end", iid=child, text=f"{name} ({n})",
+                             tags=(["c_" + c] if c else []))
             if n > 0:  # 空目录不挂占位，不出箭头
                 self.tree.insert(child, "end", iid="dummy:" + child)
 
@@ -440,13 +494,16 @@ class App:
         dirs = sorted((e for e in self.entries if e[1]), key=key, reverse=self.sort_desc)
         files = sorted((e for e in self.entries if not e[1]), key=key, reverse=self.sort_desc)
         kw = self.filter_var.get()
+        colors = self.cfg["colors"]
         self.list.delete(*self.list.get_children())
         for name, is_dir, size, mtime, nlink in dirs + files:
             if kw and not fs.match_filter(name, kw):
                 continue
             meta = f"{nlink - 2} 项" if is_dir else fs.human_size(size)
+            c = colors.get(self.remote(name))
+            tags = (["c_" + c] if c else []) + (["dir"] if is_dir else [])  # 色标在前，覆盖目录蓝
             self.list.insert("", "end", values=(name, meta, mtime.replace("-", "/")),
-                             tags=("dir",) if is_dir else ())
+                             tags=tags)
 
     def _update_headings(self):
         for col, text in (("name", "文件"), ("size", "大小"), ("mtime", "修改时间")):
@@ -534,7 +591,8 @@ class App:
                 "删除", f"删除 {len(names)} 项？目录将递归删除。"):
             return
         for name in names:
-            self.shell_run(f"rm -rf {adb.sh_quote(self.remote(name))}", f"已删除 {name}")
+            if self.shell_run(f"rm -rf {adb.sh_quote(self.remote(name))}", f"已删除 {name}"):
+                self._move_color(self.remote(name), None)
         self.reload_current()
 
     def rename_selected(self):
@@ -547,8 +605,9 @@ class App:
                                      initialvalue=old.rstrip("/"), parent=self.root)
         if not new or new == old.rstrip("/"):
             return
-        self.shell_run(f"mv {adb.sh_quote(self.remote(old))} {adb.sh_quote(self.remote(new))}",
-                       f"已重命名为 {new}")
+        if self.shell_run(f"mv {adb.sh_quote(self.remote(old))} {adb.sh_quote(self.remote(new))}",
+                          f"已重命名为 {new}"):
+            self._move_color(self.remote(old), self.remote(new))
         self.reload_current()
 
     def make_dir(self):
@@ -595,8 +654,9 @@ class App:
         if not new or new == old:
             return
         parent = fs.parent_path(path)
-        self.shell_run(f"mv {adb.sh_quote(path)} {adb.sh_quote(parent + '/' + new)}",
-                       f"已重命名为 {new}")
+        target = parent + "/" + new
+        if self.shell_run(f"mv {adb.sh_quote(path)} {adb.sh_quote(target)}", f"已重命名为 {new}"):
+            self._move_color(path, target)
         self.refresh_node(parent)
 
     def delete_node(self):
@@ -605,6 +665,7 @@ class App:
             return
         parent = fs.parent_path(path)
         if self.shell_run(f"rm -rf {adb.sh_quote(path)}", f"已删除 {path}"):
+            self._move_color(path, None)
             self.refresh_node(parent)
 
     # ---------- 传输队列 ----------

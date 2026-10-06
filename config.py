@@ -12,6 +12,7 @@ DEFAULTS = {
     "tree": {"width": 0},  # 0 = 用布局默认宽度
     "columns": {"name": 0, "size": 110, "mtime": 140},  # 0 = 用代码里的默认宽度
     "favorites": [],
+    "colors": {},  # 完整路径 → 颜色名（PALETTE 的键）
 }
 
 
