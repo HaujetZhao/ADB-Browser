@@ -42,6 +42,8 @@ class App:
         for c, w in self.cfg["columns"].items():
             if w:
                 self.list.column(c, width=w)
+        if self.cfg["tree"]["width"]:
+            self.pane.pane(self.tree_frame, width=self.cfg["tree"]["width"])
         root.protocol("WM_DELETE_WINDOW", self.on_close)
         root.after(200, self._poll_queue)
         self.refresh_devices()
@@ -51,6 +53,7 @@ class App:
     def save_config(self):
         self.cfg["window"] = {"width": self.root.winfo_width(),
                               "height": self.root.winfo_height()}
+        self.cfg["tree"] = {"width": self.tree_frame.winfo_width()}
         self.cfg["columns"] = {c: self.list.column(c, "width")
                                for c in ("name", "size", "mtime")}
         config.save(self.cfg)
@@ -81,16 +84,18 @@ class App:
 
     def _build_panes(self):
         pane = ttk.PanedWindow(self.root, orient="horizontal")
+        self.pane = pane
         pane.pack(fill="both", expand=True)
 
-        # 左：目录树（iid 直接用完整路径）
+        # 左：目录树（iid 直接用完整路径）；weight=0：窗口变宽时树宽保持不变
         tf = ttk.Frame(pane)
+        self.tree_frame = tf
         self.tree = ttk.Treeview(tf, show="tree")
         sb = ttk.Scrollbar(tf, command=self.tree.yview)
         self.tree.configure(yscrollcommand=sb.set)
         self.tree.pack(side="left", fill="both", expand=True)
         sb.pack(side="right", fill="y")
-        pane.add(tf, weight=1)
+        pane.add(tf, weight=0)
         # Tk 9 的指示器点击不发 <<TreeOpen>>，改在 Button-1 里识别箭头点击
         self.tree.bind("<Button-1>", self.on_tree_click, add="+")
         self.tree.bind("<<TreeviewSelect>>", self.on_tree_select)
@@ -99,7 +104,7 @@ class App:
         rf = ttk.Frame(pane)
         right = ttk.PanedWindow(rf, orient="vertical")
         right.pack(fill="both", expand=True)
-        pane.add(rf, weight=2)
+        pane.add(rf, weight=1)
 
         ff = ttk.Frame(right)
         ftop = ttk.Frame(ff)

@@ -9,6 +9,7 @@ PATH = os.path.join(os.path.expanduser("~"), ".adb-browser.toml")
 
 DEFAULTS = {
     "window": {"width": 1000, "height": 640},
+    "tree": {"width": 0},  # 0 = 用布局默认宽度
     "columns": {"name": 0, "size": 110, "mtime": 140},  # 0 = 用代码里的默认宽度
     "favorites": [],
 }
