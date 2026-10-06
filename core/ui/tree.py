@@ -40,17 +40,20 @@ class TreeMixin:
     def load_children(self, iid):
         """加载某目录的子目录节点（先清旧子节点）。
 
-        ls -pl 自带的链接数就是子目录数：为 0 的空目录不挂占位——没占位就没有展开箭头。
+        ls -pl 自带的链接数 − 2 是子目录数，为 0 的空目录不挂占位——没占位就没有展开箭头。
+        节点文本的括号数改用 _load_counts 的条目总数（与右侧列表同源）。
         """
         self.tree.delete(*self.tree.get_children(iid))
-        for name, is_dir, _, _, nlink in fs.parse_ls(self.shell.run(f"ls -pl {adb.sh_quote(iid)}")[0]):
+        entries = fs.parse_ls(self.shell.run(f"ls -pl {adb.sh_quote(iid)}")[0])
+        counts = self._load_counts(iid)
+        for name, is_dir, _, _, nlink in entries:
             if not is_dir:
                 continue
-            n = nlink - 2
+            n = counts.get(name, nlink - 2)
             child = iid.rstrip("/") + "/" + name
             self.tree.insert(iid, "end", iid=child, text=f"{name} ({n})",
                              tags=(["mark"] if child in self.cfg["marked"] else []))
-            if n > 0:  # 空目录不挂占位，不出箭头
+            if nlink - 2 > 0:  # 无子目录才不挂占位（箭头看子目录数，文本是条目总数）
                 self.tree.insert(child, "end", iid="dummy:" + child)
 
     def ensure_loaded(self, iid):
@@ -81,6 +84,7 @@ class TreeMixin:
         self._push_hist(node)
         self.path_var.set(node)
         self.entries = fs.parse_ls(self.shell.run(f"ls -pl {adb.sh_quote(node)}")[0])
+        self._load_counts(node)
         self.filter_var.set("")
         self.render_list()
         dirs = sum(1 for e in self.entries if e[1])
@@ -101,6 +105,7 @@ class TreeMixin:
 
     def refresh_node(self, parent):
         """节点增删改名后：重载父级树一层并导航过去（联动刷新列表）。"""
+        self.dir_counts.pop(parent, None)  # 内容变过，计数缓存失效
         self.load_children(parent)
         self.navigate(parent)
 

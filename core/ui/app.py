@@ -23,6 +23,7 @@ class App(TreeMixin, FileListMixin, TransferMixin, KeyMixin, FavoritesMixin):
         self.serial = None
         self.shell = None
         self.entries = []         # 当前目录 [(名字, 是否目录, 大小, 修改时间, 条目数)]
+        self.dir_counts = {}      # 目录 → {子目录名: 条目总数}，_load_counts 的缓存
         self.q = queue.Queue()    # 传输线程 → UI 线程
         self.transfer_kinds = {}  # 队列 iid → "pull"/"push"，完成后决定是否刷新列表
         self.sort_col = "name"    # 列表排序：表头可点，再点一次反向

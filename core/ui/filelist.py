@@ -75,7 +75,8 @@ class FileListMixin:
         for name, is_dir, size, mtime, nlink in dirs + files:
             if kw and not fs.match_filter(name, kw):
                 continue
-            meta = f"{nlink - 2} 项" if is_dir else fs.human_size(size)
+            counts = self.dir_counts.get(self.path_var.get().rstrip("/"), {})
+            meta = (f"{counts.get(name, nlink - 2)} 项" if is_dir else fs.human_size(size))
             # 标注行不带 dir 标签：每行只留一个前景色标签，避免 ttk 标签冲突
             if self.remote(name) in marked:
                 tags = ["mark"]
@@ -93,10 +94,26 @@ class FileListMixin:
         """文件操作后强制刷新当前目录（树一层 + 列表）。"""
         sel = self.tree.selection()
         node = sel[0] if sel and not sel[0].startswith("dummy:") else ROOT
+        self.dir_counts.pop(node, None)  # 内容变过，计数缓存失效
         self.load_children(node)
         self.entries = fs.parse_ls(self.shell.run(f"ls -pl {adb.sh_quote(node)}")[0])
         self.render_list()
         self.status(f"已刷新 {node}")
+
+    def _load_counts(self, node):
+        """统计 node 各子目录的条目总数（子目录 + 文件），一条 shell 循环完成，按目录缓存。"""
+        if node in self.dir_counts:
+            return self.dir_counts[node]
+        cmd = ("(cd " + adb.sh_quote(node) + " && for d in */; do "
+               "echo \"$(ls -1 \"$d\" | wc -l) ${d%/}\"; done)")
+        out, _ = self.shell.run(cmd)
+        counts = {}
+        for line in out.splitlines():
+            n, _, name = line.partition(" ")
+            if n.isdigit() and name:
+                counts[name] = int(n)
+        self.dir_counts[node] = counts
+        return counts
 
     # ---------- 交互 ----------
 
