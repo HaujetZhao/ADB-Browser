@@ -156,14 +156,8 @@ class App(TreeMixin, FileListMixin, TransferMixin, KeyMixin, FavoritesMixin):
     def go_up(self):
         old = self.path_var.get().rstrip("/")
         p = fs.parent_path(old)
-        self.navigate(p if p.startswith(ROOT) else ROOT)
-        if self.path_var.get() == p and old != p:  # 成功回到上级：恢复刚才所在的子目录为选中项
-            child = old.rsplit("/", 1)[-1]
-            iid = next((i for i in self.list.get_children()
-                        if self.list.item(i, "values")[0] == child), None)
-            if iid:
-                self.list.selection_set(iid)
-                self.list.see(iid)
+        child = old[len(p) + 1:] if old != p else None
+        self.navigate(p if p.startswith(ROOT) else ROOT, restore=child)
 
     def _push_hist(self, path):
         cur = self.history[self.hist_pos] if self.history else None
@@ -177,11 +171,21 @@ class App(TreeMixin, FileListMixin, TransferMixin, KeyMixin, FavoritesMixin):
         pos = self.hist_pos + delta
         logging.info("go_hist(%+d): pos %d/%d", delta, pos, len(self.history) - 1)
         if 0 <= pos < len(self.history):
+            target = self.history[pos]
+            # 后退到上级时恢复刚才出来的子目录；前进时目标本身就是那个子目录
+            leaving = self.history[self.hist_pos]
+            under = leaving if delta < 0 else target
+            child = under[len(target):].lstrip("/") if under.startswith(target + "/") else None
+            if child and "/" in child:
+                child = None  # 只恢复直接子目录
             self.hist_pos = pos
-            self.navigate(self.history[pos])  # 联动的 on_tree_select 会因路径相同跳过入栈
+            self.navigate(target, restore=child)  # 联动的 on_tree_select 会因路径相同跳过入栈
 
-    def navigate(self, path):
-        """跳转到 path（必须在 ROOT 下）：逐级确保树节点已加载，最后选中它。"""
+    def navigate(self, path, restore=None):
+        """跳转到 path（必须在 ROOT 下）：逐级确保树节点已加载，最后选中它。
+
+        restore：跳转完成后要恢复选中的列表项名（回到上级时即刚才所在的子目录）。
+        """
         path = "/" + path.strip("/")
         if path != ROOT and not path.startswith(ROOT + "/"):
             self.status(f"超出根目录范围：{path}")
@@ -199,3 +203,12 @@ class App(TreeMixin, FileListMixin, TransferMixin, KeyMixin, FavoritesMixin):
         self.tree.selection_set(node)
         self.tree.see(node)
         self.tree.item(node, open=True)
+        if restore:
+            def _restore():
+                iid = next((i for i in self.list.get_children()
+                            if self.list.item(i, "values")[0] == restore), None)
+                logging.info("恢复选中 %r → %s", restore, iid)
+                if iid:
+                    self.list.selection_set(iid)
+                    self.list.see(iid)
+            self.root.after_idle(_restore)  # 等列表渲染完成后执行
