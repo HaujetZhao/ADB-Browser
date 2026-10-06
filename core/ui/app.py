@@ -115,10 +115,10 @@ class App(TreeMixin, FileListMixin, TransferMixin, KeyMixin, FavoritesMixin):
                 continue
             base = [t for t in w.item(iid, "tags") or () if t not in ("seltxt", "selbg", "dir")]
             # 每行只留一个定义前景色的标签，杜绝 ttk 标签冲突：
-            # 未设色选中 → seltxt（标准反白，dir 被换下）；设色 → 只留 c_ 色，选中叠 selbg 补底
+            # 未标注选中 → seltxt（标准反白，dir 被换下）；已标注 → mark 保前景，选中叠 selbg 补底
             if iid in cur:
-                c = next((t for t in base if t.startswith("c_")), None)
-                base = [c or "seltxt"] + (["selbg"] if c else [])
+                marked = "mark" in base
+                base = (["mark", "selbg"] if marked else ["seltxt"])
             w.item(iid, tags=base)
         self.prev_sel[key] = cur
 

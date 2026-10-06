@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from core import adb, fs
-from core.ui import PALETTE, SEL_BG, SEL_FG
+from core.ui import MARK_COLOR, SEL_BG, SEL_FG, SEL_BG, SEL_FG
 
 
 class TreeMixin:
@@ -23,8 +23,7 @@ class TreeMixin:
         self.tree.bind("<<TreeviewSelect>>", self.on_tree_select)
         self.tree.tag_configure("seltxt", foreground=SEL_FG, background=SEL_BG)
         self.tree.tag_configure("selbg", background=SEL_BG)
-        for cname, hexv in PALETTE.items():
-            self.tree.tag_configure(f"c_{cname}", foreground=hexv)
+        self.tree.tag_configure("mark", foreground=MARK_COLOR)
 
         # 右键菜单（节点都是目录）
         self.tree.bind("<Button-3>", self.on_tree_menu)
@@ -34,7 +33,7 @@ class TreeMixin:
         tm.add_command(label="新建文件夹…", command=self.make_dir_in_node)
         tm.add_command(label="重命名…", command=self.rename_node)
         tm.add_command(label="删除", command=self.delete_node)
-        tm.add_cascade(label="标记颜色", menu=self._color_menu(tm, self.set_node_color))
+        tm.add_command(label="标注", command=self.toggle_node_mark)
         self.tmenu = tm
 
     # ---------- 加载与导航 ----------
@@ -50,9 +49,8 @@ class TreeMixin:
                 continue
             n = nlink - 2
             child = iid.rstrip("/") + "/" + name
-            c = self.cfg["colors"].get(child)
             self.tree.insert(iid, "end", iid=child, text=f"{name} ({n})",
-                             tags=(["c_" + c] if c else []))
+                             tags=(["mark"] if child in self.cfg["marked"] else []))
             if n > 0:  # 空目录不挂占位，不出箭头
                 self.tree.insert(child, "end", iid="dummy:" + child)
 
@@ -99,6 +97,7 @@ class TreeMixin:
         iid = self.tree.identify_row(event.y)
         if iid and not iid.startswith("dummy:"):
             self.tree.selection_set(iid)  # 先选中，联动右侧列表
+            self.tmenu.entryconfigure("end", label=self.mark_label([self.sel_node()]))
             self.tmenu.tk_popup(event.x_root, event.y_root)
 
     def refresh_node(self, parent):
@@ -128,7 +127,7 @@ class TreeMixin:
         parent = fs.parent_path(path)
         target = parent + "/" + new
         if self.shell_run(f"mv {adb.sh_quote(path)} {adb.sh_quote(target)}", f"已重命名为 {new}"):
-            self._move_color(path, target)
+            self._move_mark(path, target)
         self.refresh_node(parent)
 
     def delete_node(self):
@@ -137,5 +136,5 @@ class TreeMixin:
             return
         parent = fs.parent_path(path)
         if self.shell_run(f"rm -rf {adb.sh_quote(path)}", f"已删除 {path}"):
-            self._move_color(path, None)
+            self._move_mark(path, None)
             self.refresh_node(parent)

@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from core import adb, fs
-from core.ui import PALETTE, ROOT, SEL_BG, SEL_FG
+from core.ui import MARK_COLOR, ROOT, SEL_BG, SEL_FG
 
 
 class FileListMixin:
@@ -35,8 +35,7 @@ class FileListMixin:
 
         # 行上的前景色标签互斥（见 on_sel_change / render_list），这里的配置顺序不再敏感
         self.list.tag_configure("dir", foreground="#0066cc")
-        for cname, hexv in PALETTE.items():
-            self.list.tag_configure(f"c_{cname}", foreground=hexv)
+        self.list.tag_configure("mark", foreground=MARK_COLOR)
         self.list.tag_configure("seltxt", foreground=SEL_FG, background=SEL_BG)
         self.list.tag_configure("selbg", background=SEL_BG)
         self.list.bind("<Double-1>", self.on_list_double)
@@ -50,7 +49,7 @@ class FileListMixin:
         m.add_separator()
         m.add_command(label="推送文件到当前目录…", command=self.push_files)
         m.add_command(label="新建文件夹…", command=self.make_dir)
-        m.add_cascade(label="标记颜色", menu=self._color_menu(m, self.set_color))
+        m.add_command(label="标注", command=self.toggle_mark)
         self.menu = m
 
     # ---------- 渲染 ----------
@@ -71,16 +70,15 @@ class FileListMixin:
         dirs = sorted((e for e in self.entries if e[1]), key=key, reverse=self.sort_desc)
         files = sorted((e for e in self.entries if not e[1]), key=key, reverse=self.sort_desc)
         kw = self.filter_var.get()
-        colors = self.cfg["colors"]
+        marked = self.cfg["marked"]
         self.list.delete(*self.list.get_children())
         for name, is_dir, size, mtime, nlink in dirs + files:
             if kw and not fs.match_filter(name, kw):
                 continue
             meta = f"{nlink - 2} 项" if is_dir else fs.human_size(size)
-            c = colors.get(self.remote(name))
-            # 设色行不带 dir 标签：每行只留一个前景色标签，避免 ttk 标签冲突
-            if c:
-                tags = ["c_" + c]
+            # 标注行不带 dir 标签：每行只留一个前景色标签，避免 ttk 标签冲突
+            if self.remote(name) in marked:
+                tags = ["mark"]
             else:
                 tags = ["dir"] if is_dir else []
             self.list.insert("", "end", values=(name, meta, mtime.replace("-", "/")),
@@ -135,6 +133,8 @@ class FileListMixin:
         iid = self.list.identify_row(event.y)
         if iid and iid not in self.list.selection():
             self.list.selection_set(iid)
+        self.menu.entryconfigure(
+            "end", label=self.mark_label([self.remote(n) for n in self.sel_names()]))
         self.menu.tk_popup(event.x_root, event.y_root)
 
     # ---------- 基础 ----------
@@ -178,7 +178,7 @@ class FileListMixin:
             return
         for name in names:
             if self.shell_run(f"rm -rf {adb.sh_quote(self.remote(name))}", f"已删除 {name}"):
-                self._move_color(self.remote(name), None)
+                self._move_mark(self.remote(name), None)
         self.reload_current()
 
     def rename_selected(self):
@@ -193,7 +193,7 @@ class FileListMixin:
             return
         if self.shell_run(f"mv {adb.sh_quote(self.remote(old))} {adb.sh_quote(self.remote(new))}",
                           f"已重命名为 {new}"):
-            self._move_color(self.remote(old), self.remote(new))
+            self._move_mark(self.remote(old), self.remote(new))
         self.reload_current()
 
     def make_dir(self):
