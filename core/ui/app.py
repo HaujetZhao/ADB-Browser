@@ -95,18 +95,15 @@ class App(TreeMixin, FileListMixin, TransferMixin, KeyMixin, FavoritesMixin):
         self._build_queue(right)
 
     def _setup_sel_tags(self):
-        """选中态只给未设色行换标准配色；设色行保前景、只加选中底色。
+        """选中态配色：未设色行走标准反白（seltxt），设色行保前景只加深蓝底（selbg）。
 
         样式 map 是全局的，会把标记色一起盖掉，故禁用 map，
         改在 <<TreeviewSelect>> 里对选中变化的行差量重挂标签。
+        标签本体在各面板 _build_* 里按优先级创建（先配置者赢）。
         """
-        style = ttk.Style()
-        sel_bg, sel_fg = "SystemHighlight", "SystemHighlightText"  # 系统选中配色；style.lookup 在 Tk 9 查不准
-        style.map("Treeview", foreground=[], background=[])
+        ttk.Style().map("Treeview", foreground=[], background=[])
         self.prev_sel = {}  # 控件 → 上次选中集
         for w in (self.list, self.tree):
-            w.tag_configure("seltxt", foreground=sel_fg, background=sel_bg)
-            w.tag_configure("selbg", background=sel_bg)
             w.bind("<<TreeviewSelect>>", self.on_sel_change, add="+")
 
     def on_sel_change(self, event):
@@ -116,12 +113,12 @@ class App(TreeMixin, FileListMixin, TransferMixin, KeyMixin, FavoritesMixin):
         for iid in self.prev_sel.get(key, set()) ^ cur:
             if not w.exists(iid):
                 continue
-            base = [t for t in w.item(iid, "tags") or () if t not in ("seltxt", "selbg")]
+            base = [t for t in w.item(iid, "tags") or () if t not in ("seltxt", "selbg", "dir")]
+            # 每行只留一个定义前景色的标签，杜绝 ttk 标签冲突：
+            # 未设色选中 → seltxt（标准反白，dir 被换下）；设色 → 只留 c_ 色，选中叠 selbg 补底
             if iid in cur:
-                colored = any(t.startswith("c_") for t in base)
-                # 同选项靠后优先：未设色行 seltxt 排最后（盖过 dir 蓝），
-                # 设色行只追加 selbg 补底色，前景由排在其后的 c_ 色决定
-                base += ["selbg"] if colored else ["seltxt"]
+                c = next((t for t in base if t.startswith("c_")), None)
+                base = [c or "seltxt"] + (["selbg"] if c else [])
             w.item(iid, tags=base)
         self.prev_sel[key] = cur
 

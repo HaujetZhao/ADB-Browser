@@ -8,3 +8,7 @@ TEMP_BASE = os.path.join(tempfile.gettempdir(), "adb-browser")  # 拖出/打开�
 
 PALETTE = {"红": "#e53935", "橙": "#fb8c00", "黄": "#d4b106", "绿": "#43a047",
            "青": "#00acc1", "蓝": "#1e88e5", "紫": "#8e24aa", "灰": "#757575"}  # 标记用色
+
+# 系统选中配色（style.lookup 在 Tk 9 下查不准，直接用系统色名）
+SEL_BG = "SystemHighlight"
+SEL_FG = "SystemHighlightText"

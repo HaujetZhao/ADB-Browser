@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from core import adb, fs
-from core.ui import PALETTE, ROOT
+from core.ui import PALETTE, ROOT, SEL_BG, SEL_FG
 
 
 class FileListMixin:
@@ -33,9 +33,12 @@ class FileListMixin:
         sb2.pack(side="right", fill="y")
         right.add(ff, weight=3)
 
+        # 行上的前景色标签互斥（见 on_sel_change / render_list），这里的配置顺序不再敏感
         self.list.tag_configure("dir", foreground="#0066cc")
         for cname, hexv in PALETTE.items():
             self.list.tag_configure(f"c_{cname}", foreground=hexv)
+        self.list.tag_configure("seltxt", foreground=SEL_FG, background=SEL_BG)
+        self.list.tag_configure("selbg", background=SEL_BG)
         self.list.bind("<Double-1>", self.on_list_double)
         self.list.bind("<Button-3>", self.on_list_menu)
         self.list.bind("<Button-1>", self.on_list_click, add="+")
@@ -75,8 +78,11 @@ class FileListMixin:
                 continue
             meta = f"{nlink - 2} 项" if is_dir else fs.human_size(size)
             c = colors.get(self.remote(name))
-            # Tk 9 标签同选项靠后优先：c_ 色须排在 dir 后才能盖掉目录蓝
-            tags = (["dir"] if is_dir else []) + (["c_" + c] if c else [])
+            # 设色行不带 dir 标签：每行只留一个前景色标签，避免 ttk 标签冲突
+            if c:
+                tags = ["c_" + c]
+            else:
+                tags = ["dir"] if is_dir else []
             self.list.insert("", "end", values=(name, meta, mtime.replace("-", "/")),
                              tags=tags)
 
@@ -101,7 +107,8 @@ class FileListMixin:
         if not sel:
             return
         name = self.list.item(sel[0], "values")[0]
-        if "dir" in self.list.item(sel[0], "tags"):  # 双击目录进入
+        # 设色行不带 dir 标签（避免前景色冲突），是否目录改查数据
+        if any(e[0] == name and e[1] for e in self.entries):
             self.navigate(self.path_var.get().rstrip("/") + "/" + name)
         else:
             self.open_remote(name)

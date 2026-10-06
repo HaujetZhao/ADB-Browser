@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from core import adb, fs
-from core.ui import PALETTE
+from core.ui import PALETTE, SEL_BG, SEL_FG
 
 
 class TreeMixin:
@@ -21,6 +21,8 @@ class TreeMixin:
         self.tree.bind("<Button-1>", self.on_tree_click, add="+")
         self.tree.bind("<Double-1>", self.on_tree_double, add="+")
         self.tree.bind("<<TreeviewSelect>>", self.on_tree_select)
+        self.tree.tag_configure("seltxt", foreground=SEL_FG, background=SEL_BG)
+        self.tree.tag_configure("selbg", background=SEL_BG)
         for cname, hexv in PALETTE.items():
             self.tree.tag_configure(f"c_{cname}", foreground=hexv)
 
