@@ -31,9 +31,19 @@ uv run main.pyw
 
 ## 结构
 
-- `main.pyw` — 入口（高 DPI 适配、拖拽后端）
-- `ui.py` — 全部 tkinter 界面
-- `adb.py` — 命令层：常驻 shell、设备列表、pull/push 传输
-- `fs.py` — 纯函数：ls 解析、路径/大小处理、过滤匹配
+```
+main.pyw              入口（高 DPI 适配、日志、拖拽后端）
+core/
+  adb.py              命令层：常驻 shell、设备列表、pull/push 传输
+  fs.py               纯函数：ls 解析、路径/大小处理、过滤匹配
+  config.py           配置读写（~/.adb-browser.toml）
+  ui/
+    app.py            App 组装 + 设备/导航/历史/选中态配色
+    tree.py           左树：懒加载、选择联动、右键节点操作
+    filelist.py       右列表：渲染/排序/过滤、双击打开、文件操作
+    transfer.py       传输队列、拖拽、临时目录拉取
+    keys.py           全局快捷键与鼠标侧键
+    favorites.py      收藏路径与颜色标记
+```
 
-自检：`uv run python fs.py && uv run python adb.py`，输出 `ok` 即通过。
+自检：`uv run python core/fs.py && uv run python core/adb.py`，输出 `ok` 即通过。

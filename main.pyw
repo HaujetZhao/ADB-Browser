@@ -4,8 +4,7 @@ import logging
 import os
 import sys
 
-import adb
-from ui import App
+from core.ui.app import App
 
 # 日志写在脚本同目录 latest.log，每次启动覆盖，方便无控制台的 .pyw 排查问题
 logging.basicConfig(filename=os.path.join(os.path.dirname(os.path.abspath(__file__)), "latest.log"),
