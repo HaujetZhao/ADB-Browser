@@ -35,12 +35,13 @@ class FileListMixin:
         sb2.pack(side="right", fill="y")
         right.add(ff, weight=1)  # 多余空间全给文件列表（队列为 weight=0 恒高）
 
-        # 行上的前景色标签互斥（见 on_sel_change / render_list），这里的配置顺序不再敏感
+        # 行上的前景色标签互斥（见 on_sel_change / render_list）；
+        # marksel 须先于 mark 配置：两者并存时由 marksel 赢下前景
         c = self.style.colors
         self.list.tag_configure("dir", foreground=c.info)
-        self.list.tag_configure("mark", foreground=c.danger)
         self.list.tag_configure("seltxt", foreground=c.selectfg, background=c.selectbg)
-        self.list.tag_configure("selbg", background=c.selectbg)
+        self.list.tag_configure("marksel", foreground=c.selectfg, background=c.danger)
+        self.list.tag_configure("mark", foreground=c.danger)
         self.list.bind("<Double-1>", self.on_list_double)
         self.list.bind("<Button-3>", self.on_list_menu)
         self.list.bind("<Button-1>", self.on_list_click, add="+")

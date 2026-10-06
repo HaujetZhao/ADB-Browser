@@ -101,7 +101,7 @@ class App(TreeMixin, FileListMixin, TransferMixin, KeyMixin, FavoritesMixin):
         self._build_queue(right)
 
     def _setup_sel_tags(self):
-        """选中态配色：未设色行走标准反白（seltxt），设色行保前景只加深蓝底（selbg）。
+        """选中态配色：普通行走标准反白（seltxt），标注行换红底白字（marksel）。
 
         样式 map 是全局的，会把标记色一起盖掉，故禁用 map，
         改在 <<TreeviewSelect>> 里对选中变化的行差量重挂标签。
@@ -124,8 +124,9 @@ class App(TreeMixin, FileListMixin, TransferMixin, KeyMixin, FavoritesMixin):
             is_list_dir = (w is self.list
                            and any(e[0] == name and e[1] for e in self.entries))
             if iid in cur:
-                # 选中：前景标签让位（dir 摘除避免冲突）——未标注走标准反白，标注保前景补底
-                base = ["mark", "selbg"] if marked else ["seltxt"]
+                # 选中：前景标签让位（dir 摘除避免冲突）——普通行标准反白，
+                # 标注行红底白字（marksel 先配置赢下前景，mark 保身份供取消时识别）
+                base = ["mark", "marksel"] if marked else ["seltxt"]
             else:
                 # 取消：恢复原样——标注红 / 目录蓝 / 普通黑（树节点本就无 dir 标签）
                 if marked:

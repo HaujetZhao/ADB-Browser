@@ -81,7 +81,7 @@ class FavoritesMixin:
         config.save(self.cfg)
         sel = p in self.tree.selection()
         if p in marked:
-            tags = ["mark"] + (["selbg"] if sel else [])
+            tags = ["mark", "marksel"] if sel else ["mark"]
         else:
             tags = ["seltxt"] if sel else []
         self.tree.item(p, tags=tags)

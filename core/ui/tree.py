@@ -22,7 +22,7 @@ class TreeMixin:
         self.tree.bind("<<TreeviewSelect>>", self.on_tree_select)
         c = self.style.colors
         self.tree.tag_configure("seltxt", foreground=c.selectfg, background=c.selectbg)
-        self.tree.tag_configure("selbg", background=c.selectbg)
+        self.tree.tag_configure("marksel", foreground=c.selectfg, background=c.danger)
         self.tree.tag_configure("mark", foreground=c.danger)
 
         # 右键菜单（节点都是目录）
