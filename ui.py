@@ -114,6 +114,7 @@ class App:
         self.list.tag_configure("dir", foreground="#0066cc")
         self.list.bind("<Double-1>", self.on_list_double)
         self.list.bind("<Button-3>", self.on_list_menu)
+        self.list.bind("<Button-1>", self.on_list_click, add="+")
 
         m = tk.Menu(self.root, tearoff=0)
         m.add_command(label="拉取到电脑…", command=self.pull_selected)
@@ -191,6 +192,12 @@ class App:
         self.start_transfer("push", local, self.remote(os.path.basename(local)))
 
     def on_drag_init(self, event):
+        # 拖出仅在条目行上发起；标题行、列分隔符（全高可拖调宽）、空白处一律取消
+        x = event.x_root - self.list.winfo_rootx()
+        y = event.y_root - self.list.winfo_rooty()
+        if self.list.identify_region(x, y) != "cell" or self._near_col_edge(x) \
+                or not self.sel_names():
+            return "refuse_drop"  # tkdnd 约定：返回它则不启动拖拽
         # ponytail: 拖出 = 先同步拉到临时目录再交给资源管理器，大文件会卡界面；
         # 要不卡的得换虚拟文件方案（CFSTR_FILEDESCRIPTOR），不值得
         base = os.path.join(tempfile.gettempdir(), "adb-browser",
@@ -203,6 +210,15 @@ class App:
                 adb.transfer("pull", self.serial, self.remote(name), dst, lambda l: None)
             paths.append(dst)
         return ("copy", "DND_Files", paths)
+
+    def _near_col_edge(self, x):
+        """x 是否落在列分隔符（±6px）附近。"""
+        edge = 0
+        for c in ("name", "size"):
+            edge += self.list.column(c, "width")
+            if abs(x - edge) <= 6:
+                return True
+        return False
 
     # ---------- 设备 ----------
 
@@ -316,6 +332,10 @@ class App:
         name = self.list.item(sel[0], "values")[0]
         if "dir" in self.list.item(sel[0], "tags"):  # 双击目录进入
             self.navigate(self.path_var.get().rstrip("/") + "/" + name)
+
+    def on_list_click(self, event):
+        if self.list.identify_region(event.x, event.y) == "nothing":  # 空白处点击取消选择
+            self.list.selection_remove(*self.list.selection())
 
     def on_list_menu(self, event):
         iid = self.list.identify_row(event.y)
