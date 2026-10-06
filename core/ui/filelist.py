@@ -44,14 +44,16 @@ class FileListMixin:
         self.list.bind("<Button-3>", self.on_list_menu)
         self.list.bind("<Button-1>", self.on_list_click, add="+")
 
+        # 右键菜单上下两段：上=对选中项的操作，下=对当前所在文件夹的操作
         m = tk.Menu(self.root, tearoff=0)
         m.add_command(label="拉取到电脑…", command=self.pull_selected)
         m.add_command(label="重命名…", command=self.rename_selected)
         m.add_command(label="删除", command=self.delete_selected)
+        self.mark_idx = m.index("end") + 1  # 「标注」项的动态文字下标
+        m.add_command(label="标注", command=self.toggle_mark)
         m.add_separator()
         m.add_command(label="推送文件到当前目录…", command=self.push_files)
         m.add_command(label="新建文件夹…", command=self.make_dir)
-        m.add_command(label="标注", command=self.toggle_mark)
         self.menu = m
 
     # ---------- 渲染 ----------
@@ -166,7 +168,7 @@ class FileListMixin:
         if iid and iid not in self.list.selection():
             self.list.selection_set(iid)
         self.menu.entryconfigure(
-            "end", label=self.mark_label([self.remote(n) for n in self.sel_names()]))
+            self.mark_idx, label=self.mark_label([self.remote(n) for n in self.sel_names()]))
         self.menu.tk_popup(event.x_root, event.y_root)
 
     # ---------- 基础 ----------
