@@ -1,4 +1,5 @@
-"""tkinter 界面：设备栏、目录树、文件列表（大小/过滤/快捷键）、传输队列、右键操作、拖拽。"""
+"""tkinter 界面：设备栏、目录树、文件列表（大小/时间/排序/过滤）、传输队列、右键操作、拖拽。"""
+import json
 import os
 import queue
 import tempfile
@@ -12,6 +13,7 @@ import fs
 ROOT = "/storage/emulated/0"  # 浏览根目录：手机内部存储
 
 TEMP_BASE = os.path.join(tempfile.gettempdir(), "adb-browser")  # 拖出暂存目录
+FAV_FILE = os.path.join(os.path.expanduser("~"), ".adb-browser.json")  # 收藏路径
 
 # 焦点在这些控件里时不劫持按键（路径栏 / 过滤框 / 设备框）
 ENTRY_CLASSES = ("TEntry", "TCombobox", "Text", "Spinbox")
@@ -25,9 +27,12 @@ class App:
 
         self.serial = None
         self.shell = None
-        self.entries = []         # 当前目录 [(名字, 是否目录, 大小说明)]
+        self.entries = []         # 当前目录 [(名字, 是否目录, 大小, 修改时间, 条目数)]
         self.q = queue.Queue()    # 传输线程 → UI 线程
         self.transfer_kinds = {}  # 队列 iid → "pull"/"push"，完成后决定是否刷新列表
+        self.sort_col = "name"    # 列表排序：表头可点，再点一次反向
+        self.sort_desc = False
+        self.favorites = self.load_favorites()
 
         self._build_top()
         self._build_panes()
@@ -54,6 +59,8 @@ class App:
         entry.pack(side="left", fill="x", expand=True, padx=2)
         entry.bind("<Return>", lambda e: self.navigate(self.path_var.get()))
         ttk.Button(bar, text="前往", command=lambda: self.navigate(self.path_var.get())).pack(side="left", padx=(2, 4))
+        self.star = ttk.Button(bar, text="★", width=3, command=self.show_favorites)
+        self.star.pack(side="left", padx=(0, 4))
 
     def _build_panes(self):
         pane = ttk.PanedWindow(self.root, orient="horizontal")
@@ -87,12 +94,14 @@ class App:
         self.filter_entry.bind("<KeyRelease>", lambda e: self.render_list())
         lw = ttk.Frame(ff)
         lw.pack(fill="both", expand=True)
-        self.list = ttk.Treeview(lw, columns=("name", "size"), show="headings",
+        self.list = ttk.Treeview(lw, columns=("name", "size", "mtime"), show="headings",
                                  selectmode="extended")
-        self.list.heading("name", text="文件")
-        self.list.heading("size", text="大小")
+        for col, text in (("name", "文件"), ("size", "大小"), ("mtime", "修改时间")):
+            self.list.heading(col, text=text,
+                              command=lambda c=col: self.set_sort(c))
         self.list.column("name", anchor="w")
         self.list.column("size", width=110, anchor="e")
+        self.list.column("mtime", width=140, anchor="center")
         sb2 = ttk.Scrollbar(lw, command=self.list.yview)
         self.list.configure(yscrollcommand=sb2.set)
         self.list.pack(side="left", fill="both", expand=True)
@@ -196,6 +205,18 @@ class App:
         # 用非 Unicode 方式处理本地名，中文文件名会坏掉（报 Is a directory）
         self.start_transfer("push", local, self.remote(os.path.basename(local)))
 
+    def pull_to_temp(self, name, refresh=False):
+        """拉到本机临时目录（拖出/双击打开共用），返回 (本地路径, 退出码)。"""
+        base = os.path.join(TEMP_BASE,
+                            (self.serial or "dev").replace(":", "_"))  # 冒号在 Windows 路径非法
+        dst = os.path.join(base, name.rstrip("/"))
+        if refresh or not os.path.exists(dst):  # 已拉过直接复用
+            os.makedirs(base, exist_ok=True)
+            code = adb.transfer("pull", self.serial, self.remote(name), dst, lambda l: None)
+        else:
+            code = 0
+        return dst, code
+
     def on_drag_init(self, event):
         # 拖出仅在条目行上发起；标题行、列分隔符（全高可拖调宽）、空白处一律取消
         x = event.x_root - self.list.winfo_rootx()
@@ -205,25 +226,54 @@ class App:
             return "refuse_drop"  # tkdnd 约定：返回它则不启动拖拽
         # ponytail: 拖出 = 先同步拉到临时目录再交给资源管理器，大文件会卡界面；
         # 要不卡的得换虚拟文件方案（CFSTR_FILEDESCRIPTOR），不值得
-        base = os.path.join(TEMP_BASE,
-                            (self.serial or "dev").replace(":", "_"))  # 冒号在 Windows 路径非法
-        os.makedirs(base, exist_ok=True)
-        paths = []
-        for name in self.sel_names():
-            dst = os.path.join(base, name.rstrip("/"))
-            if not os.path.exists(dst):  # 已拉过直接复用
-                adb.transfer("pull", self.serial, self.remote(name), dst, lambda l: None)
-            paths.append(dst)
+        paths = [self.pull_to_temp(name)[0] for name in self.sel_names()]
         return ("copy", "DND_Files", paths)
 
     def _near_col_edge(self, x):
         """x 是否落在列分隔符（±6px）附近。"""
         edge = 0
-        for c in ("name", "size"):
+        for c in ("name", "size", "mtime"):
             edge += self.list.column(c, "width")
             if abs(x - edge) <= 6:
                 return True
         return False
+
+    # ---------- 收藏路径 ----------
+
+    def load_favorites(self):
+        try:
+            with open(FAV_FILE, encoding="utf-8") as f:
+                return json.load(f).get("favorites", [])
+        except (OSError, ValueError):  # 文件不存在 / 不是 JSON
+            return []
+
+    def save_favorites(self):
+        with open(FAV_FILE, "w", encoding="utf-8") as f:
+            json.dump({"favorites": self.favorites}, f, ensure_ascii=False, indent=2)
+
+    def show_favorites(self):
+        cur = self.path_var.get()
+        m = tk.Menu(self.root, tearoff=0)
+        m.add_command(label="★ 收藏当前路径", command=self.add_favorite,
+                      state="normal" if cur not in self.favorites else "disabled")
+        if self.favorites:
+            m.add_separator()
+            for p in self.favorites:
+                m.add_command(label=p, command=lambda p=p: self.navigate(p))
+        m.add_separator()
+        m.add_command(label="✕ 删除当前路径的收藏", command=self.remove_favorite,
+                      state="normal" if cur in self.favorites else "disabled")
+        m.post(self.star.winfo_rootx(), self.star.winfo_rooty() + self.star.winfo_height())
+
+    def add_favorite(self):
+        self.favorites.append(self.path_var.get())
+        self.save_favorites()
+
+    def remove_favorite(self):
+        p = self.path_var.get()
+        self.favorites.remove(p)
+        self.save_favorites()
+        self.status(f"已移除收藏：{p}")
 
     # ---------- 设备 ----------
 
@@ -252,11 +302,11 @@ class App:
     def load_children(self, iid):
         """加载某目录的子目录节点（先清掉旧子节点），每个子目录先挂占位。"""
         self.tree.delete(*self.tree.get_children(iid))
-        for name, is_dir, meta in fs.parse_ls(self.shell.run(f"ls -pl {adb.sh_quote(iid)}")[0]):
+        for name, is_dir, _, _, nlink in fs.parse_ls(self.shell.run(f"ls -pl {adb.sh_quote(iid)}")[0]):
             if not is_dir:
                 continue
             child = iid.rstrip("/") + "/" + name
-            self.tree.insert(iid, "end", iid=child, text=f"{name} ({meta.removesuffix(' 项')})")
+            self.tree.insert(iid, "end", iid=child, text=f"{name} ({nlink - 2})")
             self.tree.insert(child, "end", iid="dummy:" + child)
 
     def ensure_loaded(self, iid):
@@ -311,15 +361,34 @@ class App:
 
     # ---------- 文件列表 ----------
 
+    def set_sort(self, col):
+        if self.sort_col == col:
+            self.sort_desc = not self.sort_desc
+        else:
+            self.sort_col, self.sort_desc = col, False
+        self.render_list()
+
     def render_list(self):
-        """按过滤词（子串或通配符）重画右侧列表。"""
+        """按表头排序 + 过滤词（子串或通配符）重画右侧列表；目录始终排前面。"""
+        self._update_headings()
+        key = {"name": lambda e: e[0].lower(),
+               "size": lambda e: e[2],
+               "mtime": lambda e: e[3]}[self.sort_col]
+        dirs = sorted((e for e in self.entries if e[1]), key=key, reverse=self.sort_desc)
+        files = sorted((e for e in self.entries if not e[1]), key=key, reverse=self.sort_desc)
         kw = self.filter_var.get()
         self.list.delete(*self.list.get_children())
-        for name, is_dir, meta in self.entries:
+        for name, is_dir, size, mtime, nlink in dirs + files:
             if kw and not fs.match_filter(name, kw):
                 continue
-            self.list.insert("", "end", values=(name, meta),
+            meta = f"{nlink - 2} 项" if is_dir else fs.human_size(size)
+            self.list.insert("", "end", values=(name, meta, mtime),
                              tags=("dir",) if is_dir else ())
+
+    def _update_headings(self):
+        for col, text in (("name", "文件"), ("size", "大小"), ("mtime", "修改时间")):
+            arrow = (" ▼" if self.sort_desc else " ▲") if col == self.sort_col else ""
+            self.list.heading(col, text=text + arrow)
 
     def reload_current(self):
         """文件操作后强制刷新当前目录（树一层 + 列表）。"""
@@ -337,6 +406,22 @@ class App:
         name = self.list.item(sel[0], "values")[0]
         if "dir" in self.list.item(sel[0], "tags"):  # 双击目录进入
             self.navigate(self.path_var.get().rstrip("/") + "/" + name)
+        else:
+            self.open_remote(name)
+
+    def open_remote(self, name):
+        """拉到临时目录（总是重拉，避免打开过期缓存）后用系统关联程序打开。"""
+        self.status(f"正在拉取 {name}…")
+        self.root.update_idletasks()
+        dst, code = self.pull_to_temp(name, refresh=True)
+        if code != 0:
+            self.status(f"拉取失败：{name}")
+            return
+        try:
+            os.startfile(dst)
+            self.status(f"已打开 {name}")
+        except OSError as e:  # 该类型没有关联程序
+            self.status(f"打不开：{e}")
 
     def on_list_click(self, event):
         if self.list.identify_region(event.x, event.y) == "nothing":  # 空白处点击取消选择

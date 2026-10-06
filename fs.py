@@ -5,23 +5,19 @@ import sys
 
 
 def parse_ls(text):
-    """解析 ls -pl 输出 → [(名字, 是否目录, 大小说明)]，目录在前、名字排序。
+    """解析 ls -pl 输出 → [(名字, 是否目录, 大小, 修改时间, 条目数)]，目录在前、名字排序。
 
     toybox ls -l 字段：权限 链接数 属主 属组 大小 日期 时间 名字。
-    ponytail: 目录的"条目数"取 ls 大小字段，依赖设备 ls 的语义（sdcard/FUSE 下即条目数），
-    个别系统会显示成块大小，到时再调。
+    ponytail: 目录条目数 = 链接数 − 2（sdcard/FUSE 语义），个别系统可能不符，到时再调。
+    元组第 5 位存原始链接数，目录展示时减 2，文件不用它。
     """
     entries = []
     for line in text.splitlines():
         parts = line.split(None, 7)
         if len(parts) < 8 or parts[0][0] not in "dl-":
             continue
-        perms, nlink, size, name = parts[0], parts[1], parts[4], parts[7].rstrip("/")
-        if perms.startswith("d"):
-            meta = f"{int(nlink) - 2} 项"
-        else:
-            meta = human_size(int(size))
-        entries.append((name, perms.startswith("d"), meta))
+        name, is_dir = parts[7].rstrip("/"), parts[0][0] == "d"
+        entries.append((name, is_dir, int(parts[4]), f"{parts[5]} {parts[6]}", int(parts[1])))
     entries.sort(key=lambda e: (not e[1], e[0].lower()))
     return entries
 
@@ -64,7 +60,8 @@ if __name__ == "__main__":
             "-rw-rw---- 1 root sdcard_rw 15360 2026-10-04 22:54 a b.txt\r\n"
             "total 128\r\n")
     es = parse_ls(text)
-    assert es == [("DCIM", True, "5 项"), ("a b.txt", False, "15.0 KB")], es
+    assert es == [("DCIM", True, 4096, "2026-10-04 22:54", 7),
+                  ("a b.txt", False, 15360, "2026-10-04 22:54", 1)], es
     assert human_size(0) == "0 B" and human_size(15360) == "15.0 KB" and human_size(3 * 1024**3) == "3.0 GB"
     assert transfer_summary("1 file pulled, 0 skipped. 12.4 MB/s (12345678 bytes in 0.945s)") == "11.8 MB，12.4 MB/s，0.945s"
     assert transfer_summary("no summary here") is None
