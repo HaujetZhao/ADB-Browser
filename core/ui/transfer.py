@@ -63,10 +63,19 @@ class TransferMixin:
                 break
             if kind == "pct":
                 self.queue.set(iid, "status", f"{val}%")
-                continue
-            self.queue.set(iid, "status", val)
-            if val.startswith("完成") and self.transfer_kinds.get(iid) == "push":
-                self.reload_current()
+            elif kind == "counts":  # 后台目录计数完成 → 刷新列表与树文本
+                node, counts = val
+                self.dir_counts[node] = counts
+                if self.path_var.get().rstrip("/") == node:
+                    self.render_list()
+                    for iid in self.tree.get_children(node):
+                        name = iid[len(node) + 1:]
+                        if name in counts and not iid.startswith("dummy:"):
+                            self.tree.item(iid, text=f"{name} ({counts[name]})")
+            else:
+                self.queue.set(iid, "status", val)
+                if val.startswith("完成") and self.transfer_kinds.get(iid) == "push":
+                    self.reload_current()
         self.root.after(200, self._poll_queue)
 
     # ---------- 临时目录 ----------

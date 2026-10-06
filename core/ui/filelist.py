@@ -1,5 +1,7 @@
 """右：文件列表面板——渲染/排序/过滤、双击打开、右键文件操作。"""
 import os
+import queue
+import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
@@ -101,19 +103,32 @@ class FileListMixin:
         self.status(f"已刷新 {node}")
 
     def _load_counts(self, node):
-        """统计 node 各子目录的条目总数（子目录 + 文件），一条 shell 循环完成，按目录缓存。"""
-        if node in self.dir_counts:
-            return self.dir_counts[node]
-        cmd = ("(cd " + adb.sh_quote(node) + " && for d in */; do "
-               "echo \"$(ls -1 \"$d\" | wc -l) ${d%/}\"; done)")
-        out, _ = self.shell.run(cmd)
-        counts = {}
-        for line in out.splitlines():
-            n, _, name = line.partition(" ")
-            if n.isdigit() and name:
-                counts[name] = int(n)
-        self.dir_counts[node] = counts
-        return counts
+        """统计 node 各子目录条目总数（子目录 + 文件）。
+
+        有缓存直接返回；否则后台线程跑一趟 find 深度 2（单进程，比逐目录 ls 快得多），
+        完成后经消息队列刷新 UI。立即返回 {}，期间列表先用链接数兜底。
+        """
+        cached = self.dir_counts.get(node)
+        if cached is not None:
+            return cached
+        if node in self.counting:
+            return {}
+        self.counting.add(node)
+
+        def work():
+            out = adb.adb("shell", "find", node, "-mindepth", "1", "-maxdepth", "2",
+                          serial=self.serial)
+            counts = {}
+            for line in out.splitlines():
+                parts = line[len(node) + 1:].split("/")
+                # 深度 2 的行 = 子目录里的条目；隐藏文件与 ls 不带 -a 的行为对齐，不计入
+                if len(parts) == 2 and not any(p.startswith(".") for p in parts):
+                    counts[parts[0]] = counts.get(parts[0], 0) + 1
+            self.counting.discard(node)
+            self.q.put((None, ("counts", (node, counts))))
+
+        threading.Thread(target=work, daemon=True).start()
+        return {}
 
     # ---------- 交互 ----------
 
