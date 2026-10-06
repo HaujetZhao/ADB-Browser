@@ -43,7 +43,8 @@ class App:
             if w:
                 self.list.column(c, width=w)
         if self.cfg["tree"]["width"]:
-            self.pane.pane(self.tree_frame, width=self.cfg["tree"]["width"])
+            # Treeview 没有 width 选项，用 #0 列宽撑出请求宽度，布局时自然生效
+            self.tree.column("#0", width=self.cfg["tree"]["width"])
         root.protocol("WM_DELETE_WINDOW", self.on_close)
         root.after(200, self._poll_queue)
         self.refresh_devices()
@@ -53,7 +54,7 @@ class App:
     def save_config(self):
         self.cfg["window"] = {"width": self.root.winfo_width(),
                               "height": self.root.winfo_height()}
-        self.cfg["tree"] = {"width": self.tree_frame.winfo_width()}
+        self.cfg["tree"] = {"width": self.tree.column("#0", "width")}  # 存列宽，避免滚动条宽度的往返漂移
         self.cfg["columns"] = {c: self.list.column(c, "width")
                                for c in ("name", "size", "mtime")}
         config.save(self.cfg)
