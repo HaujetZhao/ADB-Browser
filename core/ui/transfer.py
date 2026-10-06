@@ -12,6 +12,11 @@ from core.ui import TEMP_BASE
 class TransferMixin:
     def _build_queue(self, right):
         qf = ttk.Frame(right)
+        self.queue_frame = qf
+        if self.cfg["queue"]["height"]:
+            # 恒定像素高：锁死 frame 尺寸（窗格按子级请求尺寸布局，无 sashpos 竞态）
+            qf.configure(height=self.cfg["queue"]["height"])
+            qf.pack_propagate(False)
         qw = ttk.Frame(qf)
         qw.pack(fill="both", expand=True)
         self.queue = ttk.Treeview(qw, columns=("name", "status"), show="headings", height=4)

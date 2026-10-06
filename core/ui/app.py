@@ -53,6 +53,7 @@ class App(TreeMixin, FileListMixin, TransferMixin, KeyMixin, FavoritesMixin):
         self.cfg["window"] = {"width": self.root.winfo_width(),
                               "height": self.root.winfo_height()}
         self.cfg["tree"] = {"width": self.tree.column("#0", "width")}  # 存列宽，避免滚动条宽度的往返漂移
+        self.cfg["queue"] = {"height": self.queue_frame.winfo_height()}
         self.cfg["columns"] = {c: self.list.column(c, "width")
                                for c in ("name", "size", "mtime")}
         config.save(self.cfg)
