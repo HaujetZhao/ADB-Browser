@@ -154,8 +154,16 @@ class App(TreeMixin, FileListMixin, TransferMixin, KeyMixin, FavoritesMixin):
     # ---------- 导航与历史 ----------
 
     def go_up(self):
-        p = fs.parent_path(self.path_var.get())
+        old = self.path_var.get().rstrip("/")
+        p = fs.parent_path(old)
         self.navigate(p if p.startswith(ROOT) else ROOT)
+        if self.path_var.get() == p and old != p:  # 成功回到上级：恢复刚才所在的子目录为选中项
+            child = old.rsplit("/", 1)[-1]
+            iid = next((i for i in self.list.get_children()
+                        if self.list.item(i, "values")[0] == child), None)
+            if iid:
+                self.list.selection_set(iid)
+                self.list.see(iid)
 
     def _push_hist(self, path):
         cur = self.history[self.hist_pos] if self.history else None
