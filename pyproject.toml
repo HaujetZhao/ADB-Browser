@@ -1,5 +1,7 @@
 [project]
 name = "adb-browser"
-version = "0.2.0"
+version = "0.3.0"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "tkinterdnd2>=0.6.3",
+]
