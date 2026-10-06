@@ -186,7 +186,8 @@ class App:
             self.push_one(f)
 
     def push_one(self, local):
-        """推送单个文件：目标必须是显式文件路径，这台设备的 FUSE 上推目录会失败。"""
+        # 必须显式拼好远端文件路径：Windows adb.exe 在"目标为目录自动拼文件名"时
+        # 用非 Unicode 方式处理本地名，中文文件名会坏掉（报 Is a directory）
         self.start_transfer("push", local, self.remote(os.path.basename(local)))
 
     def on_drag_init(self, event):
