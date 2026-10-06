@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from core import adb, fs
-from core.ui import MARK_COLOR, SEL_BG, SEL_FG, SEL_BG, SEL_FG
+from core.ui import MARK_COLOR, SEL_BG, SEL_FG
 
 
 class TreeMixin:
