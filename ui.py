@@ -216,10 +216,9 @@ class App:
             base = [t for t in w.item(iid, "tags") or () if t not in ("seltxt", "selbg")]
             if iid in cur:
                 colored = any(t.startswith("c_") for t in base)
-                if colored:  # 标记色保前景，只补选中底色
-                    base += ["selbg"]
-                else:  # 未设色走标准选中态；Tk 标签同选项靠前优先，seltxt 须排在 dir 前
-                    base = ["seltxt"] + base
+                # 同选项靠后优先：未设色行 seltxt 排最后（盖过 dir 蓝），
+                # 设色行只追加 selbg 补底色，前景由排在其后的 c_ 色决定
+                base += ["selbg"] if colored else ["seltxt"]
             w.item(iid, tags=base)
         self.prev_sel[key] = cur
 
@@ -534,7 +533,8 @@ class App:
                 continue
             meta = f"{nlink - 2} 项" if is_dir else fs.human_size(size)
             c = colors.get(self.remote(name))
-            tags = (["c_" + c] if c else []) + (["dir"] if is_dir else [])  # 色标在前，覆盖目录蓝
+            # Tk 9 标签同选项靠后优先：c_ 色须排在 dir 后才能盖掉目录蓝
+            tags = (["dir"] if is_dir else []) + (["c_" + c] if c else [])
             self.list.insert("", "end", values=(name, meta, mtime.replace("-", "/")),
                              tags=tags)
 
