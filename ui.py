@@ -1,5 +1,4 @@
 """tkinter 界面：设备栏、目录树、文件列表（大小/时间/排序/过滤）、传输队列、右键操作、拖拽。"""
-import json
 import os
 import queue
 import tempfile
@@ -8,12 +7,12 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
 import adb
+import config
 import fs
 
 ROOT = "/storage/emulated/0"  # 浏览根目录：手机内部存储
 
 TEMP_BASE = os.path.join(tempfile.gettempdir(), "adb-browser")  # 拖出暂存目录
-FAV_FILE = os.path.join(os.path.expanduser("~"), ".adb-browser.json")  # 收藏路径
 
 # 焦点在这些控件里时不劫持按键（路径栏 / 过滤框 / 设备框）
 ENTRY_CLASSES = ("TEntry", "TCombobox", "Text", "Spinbox")
@@ -23,7 +22,8 @@ class App:
     def __init__(self, root):
         self.root = root
         root.title("ADB 文件浏览器")
-        root.geometry("1000x640")
+        self.cfg = config.load()
+        root.geometry(f'{self.cfg["window"]["width"]}x{self.cfg["window"]["height"]}')
 
         self.serial = None
         self.shell = None
@@ -32,15 +32,32 @@ class App:
         self.transfer_kinds = {}  # 队列 iid → "pull"/"push"，完成后决定是否刷新列表
         self.sort_col = "name"    # 列表排序：表头可点，再点一次反向
         self.sort_desc = False
-        self.favorites = self.load_favorites()
+        self.favorites = self.cfg["favorites"]
 
         self._build_top()
         self._build_panes()
         self._build_status()
         self._bind_keys()
         self._setup_dnd()
+        for c, w in self.cfg["columns"].items():
+            if w:
+                self.list.column(c, width=w)
+        root.protocol("WM_DELETE_WINDOW", self.on_close)
         root.after(200, self._poll_queue)
         self.refresh_devices()
+
+    # ---------- 配置 ----------
+
+    def save_config(self):
+        self.cfg["window"] = {"width": self.root.winfo_width(),
+                              "height": self.root.winfo_height()}
+        self.cfg["columns"] = {c: self.list.column(c, "width")
+                               for c in ("name", "size", "mtime")}
+        config.save(self.cfg)
+
+    def on_close(self):
+        self.save_config()
+        self.root.destroy()
 
     # ---------- 界面搭建 ----------
 
@@ -240,16 +257,8 @@ class App:
 
     # ---------- 收藏路径 ----------
 
-    def load_favorites(self):
-        try:
-            with open(FAV_FILE, encoding="utf-8") as f:
-                return json.load(f).get("favorites", [])
-        except (OSError, ValueError):  # 文件不存在 / 不是 JSON
-            return []
-
     def save_favorites(self):
-        with open(FAV_FILE, "w", encoding="utf-8") as f:
-            json.dump({"favorites": self.favorites}, f, ensure_ascii=False, indent=2)
+        config.save(self.cfg)
 
     def show_favorites(self):
         cur = self.path_var.get()
@@ -382,7 +391,7 @@ class App:
             if kw and not fs.match_filter(name, kw):
                 continue
             meta = f"{nlink - 2} 项" if is_dir else fs.human_size(size)
-            self.list.insert("", "end", values=(name, meta, mtime),
+            self.list.insert("", "end", values=(name, meta, mtime.replace("-", "/")),
                              tags=("dir",) if is_dir else ())
 
     def _update_headings(self):
