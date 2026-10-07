@@ -2,6 +2,8 @@
 
 浏览 Android 设备文件（通过 adb）：左边目录树懒加载，右边文件列表（含大小），支持拉取/推送/删除/重命名/新建文件夹，带传输进度队列、文件名过滤（通配符）、多设备切换、拖拽收发文件。
 
+![界面截图](assets/demo.png)
+
 ## 运行
 
 adb 不需要另装：仓库 `bin/` 里自带 [adb-chinese](https://github.com/gws0920/adb-chinese) 编译的 adb.exe（修复了 Windows 下官方 adb 的中文路径问题），程序只认它，PATH 里的官方 adb 不受影响。首次连接设备记得在手机上授权。
