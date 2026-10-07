@@ -1,4 +1,4 @@
-# ADB 文件浏览器
+# ADB-Browser
 
 浏览 Android 设备文件（通过 adb）：左边目录树懒加载，右边文件列表（含大小），支持拉取/推送/删除/重命名/新建文件夹，带传输进度队列、文件名过滤（通配符）、多设备切换、拖拽收发文件。
 
@@ -13,10 +13,10 @@ uv run main.pyw
 ### 打包
 
 ```
-uv run pyinstaller --noconfirm adb-browser.spec
+uv run pyinstaller --noconfirm ADB-Browser.spec
 ```
 
-产出 `dist/adb-browser/`（目录版、无控制台，整个目录拷走即可运行）。打包配置都在 [adb-browser.spec](adb-browser.spec)：`--collect-all tkinterdnd2`（拖拽后端的 tcl 扩展）、`--add-data` 带入窗口图标与 `bin/` 的 adb，excludes 砍掉用不到的 Pillow 编解码器（AVIF/色彩管理/WebP）与 ssl/_hashlib（应用无网络、无加密）。改打包选项直接编辑 spec 文件。
+产出 `dist/ADB-Browser/`（目录版、无控制台，整个目录拷走即可运行）。打包配置都在 [ADB-Browser.spec](ADB-Browser.spec)：`--collect-all tkinterdnd2`（拖拽后端的 tcl 扩展）、`--add-data` 带入窗口图标与 `bin/` 的 adb，excludes 砍掉用不到的 Pillow 编解码器（AVIF/色彩管理/WebP）与 ssl/_hashlib（应用无网络、无加密）。改打包选项直接编辑 spec 文件。
 
 ## 操作
 
@@ -31,7 +31,7 @@ uv run pyinstaller --noconfirm adb-browser.spec
 | 全选 | Ctrl+A |
 | 排序 | 点击表头（文件/大小/修改时间），再点一次反向；目录始终在前 |
 | 调列宽 | 拖动表头分隔线（文件列表与传输队列都有） |
-| 收藏路径 | 路径栏 ★ 按钮：收藏当前路径、点条目跳转、删除收藏（存 `~/.adb-browser.json`） |
+| 收藏路径 | 路径栏 ★ 按钮：收藏当前路径、点条目跳转、删除收藏（存 `~/.adb-browser.toml`） |
 | 过滤 | 直接打字（自动聚焦过滤框）/ Esc 清空；含 `* ? [` 时按通配符，否则子串，均忽略大小写 |
 | 拉取 / 推送 | 右键菜单，或**拖入**文件到列表（拖出暂未开放） |
 | 切换设备 | 左上设备下拉框（⟳ 刷新在线设备） |

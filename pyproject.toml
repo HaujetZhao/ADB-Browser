@@ -1,5 +1,5 @@
 [project]
-name = "adb-browser"
+name = "ADB-Browser"
 version = "0.8.0"
 requires-python = ">=3.14"
 dependencies = [

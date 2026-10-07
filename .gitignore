@@ -4,5 +4,5 @@ latest.log
 build/
 dist/
 *.spec
-!adb-browser.spec
+!ADB-Browser.spec
 rust/target/
