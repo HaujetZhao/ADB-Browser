@@ -1,0 +1,22 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- 文件夹 + 闪电：琥珀渐变文件夹配闪电，点出"快速传文件" -->
+  <defs>
+    <linearGradient id="bg3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#181c2a"/>
+      <stop offset="1" stop-color="#0e1018"/>
+    </linearGradient>
+    <linearGradient id="fold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fbbf24"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg3)"/>
+
+  <!-- 文件夹 -->
+  <path d="M112 148 h96 l32 36 h160 a20 20 0 0 1 20 20 v160 a20 20 0 0 1 -20 20 h-288 a20 20 0 0 1 -20 -20 v-196 a20 20 0 0 1 20 -20 z" fill="url(#fold)"/>
+  <rect x="92" y="196" width="328" height="18" fill="#ffffff" opacity="0.28"/>
+
+  <!-- 闪电 -->
+  <path d="M276 224 l-64 96 h44 l-16 72 72 -104 h-46 l10 -64 z" fill="#1f2437"/>
+</svg>

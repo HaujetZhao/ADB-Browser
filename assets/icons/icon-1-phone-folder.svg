@@ -1,0 +1,32 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- 手机 + 文件夹：深色圆角底，靛紫渐变手机，青绿文件夹 -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1e2438"/>
+      <stop offset="1" stop-color="#12141f"/>
+    </linearGradient>
+    <linearGradient id="phone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#818cf8"/>
+      <stop offset="1" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="folder" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#34d399"/>
+      <stop offset="1" stop-color="#10b981"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- 手机（左，微倾斜） -->
+  <g transform="rotate(-8 220 256)">
+    <rect x="150" y="110" width="150" height="280" rx="26" fill="url(#phone)"/>
+    <rect x="168" y="150" width="114" height="204" rx="10" fill="#12141f" opacity="0.35"/>
+    <rect x="200" y="126" width="50" height="8" rx="4" fill="#12141f" opacity="0.4"/>
+  </g>
+
+  <!-- 文件夹（右下，盖在手机上） -->
+  <g>
+    <path d="M262 250 h64 l22 24 h76 a16 16 0 0 1 16 16 v88 a16 16 0 0 1 -16 16 h-162 a16 16 0 0 1 -16 -16 v-112 a16 16 0 0 1 16 -16 z" fill="url(#folder)"/>
+    <rect x="246" y="286" width="178" height="14" fill="#ffffff" opacity="0.25"/>
+  </g>
+</svg>

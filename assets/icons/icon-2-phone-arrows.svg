@@ -1,0 +1,21 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- 手机 + 双向传输箭头：靛蓝底渐变，白色箭头表收发 -->
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg2)"/>
+
+  <!-- 手机轮廓 -->
+  <rect x="176" y="96" width="160" height="320" rx="32" fill="none" stroke="#ffffff" stroke-width="22"/>
+  <line x1="232" y1="126" x2="280" y2="126" stroke="#ffffff" stroke-width="16" stroke-linecap="round"/>
+
+  <!-- 双向箭头：上=推送 下=拉取 -->
+  <g stroke="#a5f3fc" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M226 250 v-56 m0 0 l-24 24 m24 -24 l24 24"/>
+    <path d="M286 262 v56 m0 0 l-24 -24 m24 24 l24 -24"/>
+  </g>
+</svg>

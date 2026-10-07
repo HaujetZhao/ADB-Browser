@@ -13,7 +13,7 @@ uv run main.pyw
 ### 打包
 
 ```
-uv run pyinstaller --noconfirm --onefile --windowed --name adb-browser --collect-all tkinterdnd2 main.pyw
+uv run pyinstaller --noconfirm --onefile --windowed --name adb-browser --icon assets/icons/adb-browser.ico --collect-all tkinterdnd2 main.pyw
 ```
 
 产出 `dist/adb-browser.exe`（单文件、无控制台）。`--collect-all tkinterdnd2` 是拖拽后端的 tcl 扩展所需。
