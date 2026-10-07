@@ -13,10 +13,10 @@ uv run main.pyw
 ### 打包
 
 ```
-uv run pyinstaller --noconfirm --onefile --windowed --name adb-browser --icon assets/icons/adb-browser.ico --collect-all tkinterdnd2 main.pyw
+uv run pyinstaller --noconfirm adb-browser.spec
 ```
 
-产出 `dist/adb-browser.exe`（单文件、无控制台）。`--collect-all tkinterdnd2` 是拖拽后端的 tcl 扩展所需。
+产出 `dist/adb-browser/`（目录版、无控制台，整个目录拷走即可运行）。打包配置都在 [adb-browser.spec](adb-browser.spec)：`--collect-all tkinterdnd2`（拖拽后端的 tcl 扩展）、`--add-data` 带入窗口图标、excludes 砍掉用不到的 Pillow 编解码器（AVIF/色彩管理/WebP）与 ssl/_hashlib（应用无网络、无加密），体积从 ~47M 降到 ~30M。改打包选项直接编辑 spec 文件。
 
 ## 操作
 

@@ -24,6 +24,7 @@ try:
 except ImportError:
     import tkinter as tk
     root = tk.Tk()
+root.withdraw()  # 建 UI 期间藏住窗口，避免先闪出默认小窗再变大；须在 iconbitmap 等会触发映射的调用前
 
 root.report_callback_exception = lambda t, v, b: logging.exception("Tk 回调异常", exc_info=(t, v, b))
 root.iconbitmap(icon)
@@ -31,4 +32,6 @@ root.tk.call("tk", "scaling", ctypes.windll.shcore.GetScaleFactorForDevice(0) / 
 logging.info("启动: python %s / tk %s / %s",
              sys.version.split()[0], root.tk.call("info", "patchlevel"), sys.executable)
 App(root)
+root.update_idletasks()
+root.deiconify()
 root.mainloop()

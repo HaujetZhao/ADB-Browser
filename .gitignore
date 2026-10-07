@@ -1,3 +1,8 @@
+__pycache__/
+.venv/
+latest.log
 build/
 dist/
 *.spec
+!adb-browser.spec
+rust/target/
