@@ -15,6 +15,9 @@ sys.excepthook = lambda t, v, b: logging.exception("未捕获异常", exc_info=(
 
 ctypes.windll.shcore.SetProcessDpiAwareness(1)  # 高 DPI 适配，须在创建窗口前
 
+# 窗口/任务栏图标：打包时经 --add-data 带入，运行时在解压目录取
+icon = os.path.join(sys._MEIPASS if getattr(sys, "frozen", False) else ".", "assets", "icons", "adb-browser.ico")
+
 try:
     from tkinterdnd2 import TkinterDnD
     root = TkinterDnD.Tk()
@@ -23,6 +26,7 @@ except ImportError:
     root = tk.Tk()
 
 root.report_callback_exception = lambda t, v, b: logging.exception("Tk 回调异常", exc_info=(t, v, b))
+root.iconbitmap(icon)
 root.tk.call("tk", "scaling", ctypes.windll.shcore.GetScaleFactorForDevice(0) / 75)
 logging.info("启动: python %s / tk %s / %s",
              sys.version.split()[0], root.tk.call("info", "patchlevel"), sys.executable)
