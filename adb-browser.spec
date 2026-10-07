@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('assets/icons/adb-browser.ico', 'assets/icons')]
+datas = [('assets/icons/adb-browser.ico', 'assets/icons'), ('bin', 'bin')]
 binaries = []
 hiddenimports = []
 tmp_ret = collect_all('tkinterdnd2')

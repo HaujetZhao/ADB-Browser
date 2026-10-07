@@ -4,7 +4,7 @@
 
 ## 运行
 
-需要 `adb` 在 PATH 中且设备已授权。
+adb 不需要另装：仓库 `bin/` 里自带 [adb-chinese](https://github.com/gws0920/adb-chinese) 编译的 adb.exe（修复了 Windows 下官方 adb 的中文路径问题），程序只认它，PATH 里的官方 adb 不受影响。首次连接设备记得在手机上授权。
 
 ```
 uv run main.pyw
@@ -16,7 +16,7 @@ uv run main.pyw
 uv run pyinstaller --noconfirm adb-browser.spec
 ```
 
-产出 `dist/adb-browser/`（目录版、无控制台，整个目录拷走即可运行）。打包配置都在 [adb-browser.spec](adb-browser.spec)：`--collect-all tkinterdnd2`（拖拽后端的 tcl 扩展）、`--add-data` 带入窗口图标、excludes 砍掉用不到的 Pillow 编解码器（AVIF/色彩管理/WebP）与 ssl/_hashlib（应用无网络、无加密），体积从 ~47M 降到 ~30M。改打包选项直接编辑 spec 文件。
+产出 `dist/adb-browser/`（目录版、无控制台，整个目录拷走即可运行）。打包配置都在 [adb-browser.spec](adb-browser.spec)：`--collect-all tkinterdnd2`（拖拽后端的 tcl 扩展）、`--add-data` 带入窗口图标与 `bin/` 的 adb，excludes 砍掉用不到的 Pillow 编解码器（AVIF/色彩管理/WebP）与 ssl/_hashlib（应用无网络、无加密）。改打包选项直接编辑 spec 文件。
 
 ## 操作
 
