@@ -6,8 +6,9 @@ import sys
 
 from core.ui.app import App
 
-# 日志写在脚本同目录 latest.log，每次启动覆盖，方便无控制台的 .pyw 排查问题
-logging.basicConfig(filename=os.path.join(os.path.dirname(os.path.abspath(__file__)), "latest.log"),
+# 日志写在脚本（打包后为 exe）同目录 latest.log，每次启动覆盖，方便无控制台的 .pyw 排查问题
+base = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, "frozen", False) else __file__))
+logging.basicConfig(filename=os.path.join(base, "latest.log"),
                     filemode="w", level=logging.INFO,
                     format="%(asctime)s %(levelname)s %(message)s")
 sys.excepthook = lambda t, v, b: logging.exception("未捕获异常", exc_info=(t, v, b))

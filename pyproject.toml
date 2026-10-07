@@ -7,3 +7,8 @@ dependencies = [
     "tomli-w>=1.2.0",
     "ttkbootstrap>=2.2.3",
 ]
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.22.3",
+]
