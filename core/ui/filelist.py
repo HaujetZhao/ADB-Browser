@@ -3,7 +3,9 @@ import os
 import queue
 import threading
 import tkinter as tk
-from tkinter import filedialog, messagebox, simpledialog, ttk
+from tkinter import filedialog, messagebox, ttk
+
+from ttkbootstrap.dialogs import Querybox
 
 from core import adb, fs
 from core.ui import ROOT
@@ -223,8 +225,8 @@ class FileListMixin:
             self.status("重命名需要恰好选中一项")
             return
         old = sel[0]
-        new = simpledialog.askstring("重命名", "新名字：",
-                                     initialvalue=old.rstrip("/"), parent=self.root)
+        new = Querybox.get_string("新名字：", "重命名",
+                                  initialvalue=old.rstrip("/"), parent=self.root)
         if not new or new == old.rstrip("/"):
             return
         if self.shell_run(f"mv {adb.sh_quote(self.remote(old))} {adb.sh_quote(self.remote(new))}",
@@ -233,7 +235,7 @@ class FileListMixin:
         self.reload_current()
 
     def make_dir(self):
-        name = simpledialog.askstring("新建文件夹", "文件夹名：", parent=self.root)
+        name = Querybox.get_string("文件夹名：", "新建文件夹", parent=self.root)
         if not name:
             return
         self.shell_run(f"mkdir -p {adb.sh_quote(self.remote(name))}", f"已创建 {name}")

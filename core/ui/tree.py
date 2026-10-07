@@ -1,6 +1,8 @@
 """左：目录树面板——懒加载、选择联动列表、右键节点操作。"""
 import tkinter as tk
-from tkinter import filedialog, messagebox, simpledialog, ttk
+from tkinter import filedialog, messagebox, ttk
+
+from ttkbootstrap.dialogs import Querybox
 
 from core import adb, fs
 
@@ -116,7 +118,7 @@ class TreeMixin:
 
     def make_dir_in_node(self):
         parent = self.sel_node()
-        name = simpledialog.askstring("新建文件夹", "文件夹名：", parent=self.root)
+        name = Querybox.get_string("文件夹名：", "新建文件夹", parent=self.root)
         if not name:
             return
         self.shell_run(f"mkdir -p {adb.sh_quote(parent + '/' + name)}", f"已创建 {name}")
@@ -125,7 +127,7 @@ class TreeMixin:
     def rename_node(self):
         path = self.sel_node()
         old = path.rsplit("/", 1)[-1]
-        new = simpledialog.askstring("重命名", "新名字：", initialvalue=old, parent=self.root)
+        new = Querybox.get_string("新名字：", "重命名", initialvalue=old, parent=self.root)
         if not new or new == old:
             return
         parent = fs.parent_path(path)
