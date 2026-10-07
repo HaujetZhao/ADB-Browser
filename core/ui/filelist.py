@@ -28,7 +28,7 @@ class FileListMixin:
                               command=lambda c=col: self.set_sort(c))
         self.list.column("name", anchor="w")  # 只有文件列吃掉多余空间
         self.list.column("size", width=110, anchor="e", stretch=False)
-        self.list.column("mtime", width=140, anchor="center", stretch=False)
+        self.list.column("mtime", width=140, anchor="e", stretch=False)
         sb2 = ttk.Scrollbar(lw, command=self.list.yview)
         self.list.configure(yscrollcommand=sb2.set)
         self.list.pack(side="left", fill="both", expand=True)

@@ -36,6 +36,11 @@ class App(TreeMixin, FileListMixin, TransferMixin, KeyMixin, FavoritesMixin):
         self.hist_pos = -1
 
         self.style = Style(theme=THEME)
+        # flatly 把表头边框元素画成隐形（无列分隔线），借 vista 的原生表头元素顶掉：
+        # 元素名与 flatly 布局引用的一致，覆盖即全局生效（文件列表与传输队列都有线）
+        for el in ("Treeheading.cell", "Treeheading.border", "Treeheading.padding",
+                   "Treeheading.image", "Treeheading.text"):
+            self.style.element_create(el, "from", "vista")
         self._build_top()
         self._build_panes()
         self._setup_sel_tags()
